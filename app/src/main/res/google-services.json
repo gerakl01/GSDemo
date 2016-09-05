@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "936394923955",
+    "project_id": "gsdemo-adefe"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:936394923955:android:d52d375e522a98fe",
+        "android_client_info": {
+          "package_name": "googlemap.gsdemo.dji.com.gsdemo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "936394923955-29gmmha27q86e09i3c3753daomjhmnuf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "googlemap.gsdemo.dji.com.gsdemo",
+            "certificate_hash": "D41700CDA1BE50E4EED7AAE57A9D6FA00F65AA99"
+          }
+        },
+        {
+          "client_id": "936394923955-s366sq8k5ldtme4rfeu98ahstl9leffa.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA3zXgRlieqYNTLoSRfUpB2ODUsD5n5ovM"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

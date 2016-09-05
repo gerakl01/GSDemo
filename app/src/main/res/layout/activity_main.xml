@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="fill_parent"
+    xmlns:android1="http://schemas.android.com/apk/res-auto"
+    android:background="#FFFFFF"
+    tools:context="googlemap.gsdemo.dji.com.gsdemo.MainActivity"
+    android:orientation="vertical">
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <TextView
+            android:id="@+id/ConnectStatusTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="GSDemo"
+            android:gravity="center"
+            android:textColor="#000000"
+            android:textSize="21sp"
+            />
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/locate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Locate"
+            android:layout_weight="1"/>
+        <Button
+            android:id="@+id/add"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Add"
+            android:layout_weight="1"/>
+        <Button
+            android:id="@+id/add_w"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Square or grid settings"
+            android:layout_weight="1"/>
+        <Button
+            android:id="@+id/clear"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Clear"
+            android:layout_weight="1"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+
+        <Button
+
+            android:id="@+id/swit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="switch"
+            android:layout_weight="1"/>
+        <Button
+
+
+
+            android:id="@+id/config"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Config"
+            android:layout_weight="0.9"/>
+        <Button
+            android:id="@+id/prepare"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Prepare"
+            android:layout_weight="0.9"/>
+        <Button
+            android:id="@+id/start"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Start"
+            android:layout_weight="1"/>
+        <Button
+            android:id="@+id/stop"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Stop"
+            android:layout_weight="1"/>
+    </LinearLayout>
+
+
+
+
+
+
+
+
+
+
+     <LinearLayout android:layout_width="fill_parent"
+          android:layout_height="fill_parent"
+          android:orientation="horizontal">
+
+
+             <RelativeLayout android:layout_width="0dp"
+                 android:layout_height="fill_parent"
+                 android:layout_weight="1" >
+
+             <fragment
+             android:layout_alignParentLeft="true"
+
+             android:id="@+id/map"
+             android:layout_width="match_parent"
+             android:layout_height="fill_parent"
+             android:layout_weight="14"
+             class="com.google.android.gms.maps.SupportMapFragment"
+
+             />
+
+             </RelativeLayout>
+
+
+
+
+
+
+
+             <RelativeLayout android:layout_width="0dp"
+                 android:layout_height="fill_parent"
+                 android:layout_weight="1" >
+         <RelativeLayout
+             android:layout_alignParentRight="true"
+             android:id="@+id/main_title_rl"
+             android:layout_width="fill_parent"
+             android:layout_height="20dp"
+             android:background="@color/black_overlay" >
+
+
+
+             <TextView
+                 android:id="@+id/ConnectStatusTextViewCamera"
+                 android:layout_width="wrap_content"
+                 android:layout_height="wrap_content"
+                 android:layout_centerInParent="true"
+                 android:text="FPVDemo"
+                 android:textColor="@android:color/white"
+                 android:textSize="21sp" />
+         </RelativeLayout>
+
+         <TextView
+             android:id="@+id/timer"
+             android:layout_width="150dp"
+             android:layout_weight="1"
+             android:layout_height="wrap_content"
+
+             android:gravity="center"
+             android:textColor="#ffffff"
+             android:layout_alignTop="@+id/video_previewer_surface"
+             android:layout_centerHorizontal="true" />
+                 
+                 
+
+             <TextureView
+             android:id="@+id/video_previewer_surface"
+             android:layout_width="match_parent"
+             android:layout_height="180dp"
+             android:layout_alignParentRight="true"
+             android:layout_below="@id/main_title_rl"
+             android:layout_gravity="center"
+             android:layout_centerHorizontal="true"
+             android:layout_above="@+id/linearLayout" />
+
+                 <ImageView
+                     android:id="@+id/ImageFeed"
+                     android:layout_width="match_parent"
+                     android:layout_height="180dp"
+                     android:layout_alignParentRight="true"
+                     android:layout_below="@id/main_title_rl"
+                     android:layout_gravity="center"
+                     android:layout_centerHorizontal="true"
+                     android:background="#FFFFFF00"
+                     android:layout_above="@+id/linearLayout"/>
+
+         <LinearLayout
+             android:layout_width="match_parent"
+             android:layout_height="wrap_content"
+             android:orientation="horizontal"
+             android:layout_alignParentBottom="true"
+
+             android:id="@+id/linearLayout">
+             <Button
+                 android:id="@+id/btn_capture"
+                 android:layout_width="0dp"
+                 android:layout_weight="1"
+                 android:layout_gravity="center_vertical"
+                 android:layout_height="wrap_content"
+                 android:text="Capture"
+                 android:textSize="10sp"/>
+
+             <ToggleButton
+                 android:id="@+id/btn_record"
+                 android:layout_width="0dp"
+                 android:layout_height="wrap_content"
+                 android:text="Start Record"
+                 android:textOff="Start Record"
+                 android:textOn="Stop Record"
+                 android:layout_weight="1"
+                 android:layout_gravity="center_vertical"
+                 android:textSize="12dp"
+                 android:checked="false" />
+
+             <Button
+                 android:id="@+id/btn_shoot_photo_mode"
+                 android:layout_width="0dp"
+                 android:layout_weight="1"
+                 android:layout_height="wrap_content"
+                 android:layout_gravity="center_vertical"
+                 android:text="Shoot Photo Mode"
+                 android:textSize="12sp"/>
+             <Button
+                 android:id="@+id/btn_record_video_mode"
+                 android:layout_width="0dp"
+                 android:layout_height="wrap_content"
+                 android:text="Record Video Mode"
+                 android:layout_weight="2"
+                 android:layout_gravity="center_vertical" />
+
+
+         </LinearLayout>
+
+
+
+             </RelativeLayout>
+       </LinearLayout>
+
+   </LinearLayout>
