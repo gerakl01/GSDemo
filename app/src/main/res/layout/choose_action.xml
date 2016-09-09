@@ -16,11 +16,19 @@
             android:text="Create grid"/>
 
         <RadioButton
+            android:id="@+id/square"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="5pt"
+            android:text="Create square" />
+
+
+        <RadioButton
             android:id="@+id/drone"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="5pt"
-            android:text="Add waypoints for drone"/>
+            android:text="Add random waypoints" />
 
 
     </RadioGroup>

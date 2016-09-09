@@ -113,15 +113,14 @@
                  android:layout_height="fill_parent"
                  android:layout_weight="1" >
 
-             <fragment
+                 <fragment xmlns:android="http://schemas.android.com/apk/res/android"
              android:layout_alignParentLeft="true"
 
              android:id="@+id/map"
              android:layout_width="match_parent"
              android:layout_height="fill_parent"
              android:layout_weight="14"
-             class="com.google.android.gms.maps.SupportMapFragment"
-
+                     class="com.google.android.gms.maps.SupportMapFragment"
              />
 
              </RelativeLayout>

@@ -663,7 +663,7 @@ return  drone_move;
        Coordinates[][] midpoints = new Coordinates[2][x];
 
 
-       Coordinates  drone_pointS[] = new Coordinates[2*x +2*y +4];
+
 
 
 
@@ -687,7 +687,7 @@ return  drone_move;
            Log.e(TAG, "extend distance   " + 1000*Coordinates.distFrom(midpoints[1][midpoints[1].length - 1].lon, midpoints[1][midpoints[0].length - 1].lat, lat[1], lon[1]));
            int l = (int) ((1000 * c.distFrom(midpoints[1][midpoints[0].length - 1].lon, midpoints[1][midpoints[0].length - 1].lat, lat[1], lon[1])) / r);
            Coordinates[][] emid = new Coordinates[2][midpoints[0].length + l];
-           emid= c.extend_mikos(r, new Coordinates(lon[1], lat[0]), new Coordinates(lon[1], lat[1]),midpoints);
+           emid = extend_mikos(r, new Coordinates(lon[1], lat[0]), new Coordinates(lon[1], lat[1]), midpoints);
            x = emid[0].length;
            midpoints = new Coordinates[2][x];
            midpoints=c.twoDimensionalArrayClone(emid);
@@ -702,45 +702,51 @@ return  drone_move;
        }
 
 
+       Coordinates drone_pointS[] = new Coordinates[points.length + (midpoints[0].length * midpoints.length) + 4];
 
-
-
-
+       Log.e(TAG, "length   " + drone_pointS.length);
 
 
        int m=0,dps=1;
 
        drone_pointS[0]=new Coordinates(lon[0], lat[0]);
+
        for (int i = 0; i < midpoints[0].length; i++) {
 
 
-           drone_pointS[dps]=midpoints[1][i];
+           drone_pointS[dps] = midpoints[0][i];
            dps++;
 
        }
-       drone_pointS[dps]=new Coordinates(lon[1], lat[0]);
-       for (int i = midpoints[0].length; i <points.length; i++) {
+
+       drone_pointS[dps++] = new Coordinates(lon[1], lat[0]);
+
+
+       for (int i = points.length / 2; i < points.length; i++) {
+
+
+           drone_pointS[dps]=points[i];
+           dps++;
+
+       }
+       drone_pointS[dps++] = new Coordinates(lon[1], lat[1]);
+
+       for (int i = midpoints[0].length - 1; i >= 0; i--) {
+
+
+           drone_pointS[dps] = midpoints[1][i];
+           dps++;
+       }
+
+       drone_pointS[dps++] = new Coordinates(lon[0], lat[1]);
+
+
+       for (int i = points.length / 2 - 1; i >= 0; i--) {
 
 
            drone_pointS[dps]=points[i];
            dps++;
        }
-       drone_pointS[dps]=new Coordinates(lon[1], lat[1]);
-       for (int i = midpoints[0].length-1; i >0 ; i--) {
-
-
-           drone_pointS[dps]=midpoints[0][i];
-           dps++;
-       }
-       drone_pointS[dps]=new Coordinates(lon[0], lat[1]);
-       for (int i = points.length/2-1; i > 0; i--) {
-
-
-           drone_pointS[dps]=points[i];
-           dps++;
-       }
-
-
        return  drone_pointS;
    }
 

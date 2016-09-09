@@ -138,7 +138,7 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
     public Button locate, add, add_waypoints, clear;
     private Button swit, config, prepare, start, stop;
 
-    private boolean isAdd = false;
+    public boolean isAdd = false, flag = true;
 
 
     private double droneLocationLat = 181, droneLocationLng = 181;
@@ -506,11 +506,11 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
             LatLng point = new LatLng(drone_move[i].lat, drone_move[i].lon);
 
 
-            // gMap.addMarker(new MarkerOptions().position(point).title( i + " "  + "Drone " ).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
+            Log.d(TAG, "drone move " + i);
             MarkerOptions markerOptions = new MarkerOptions();
             markerOptions.position(point);
-           // markerOptions.title("Drone " + drone_num[i][j]);
-            //markerOptions.title( "Drone ");
+            markerOptions.title(i + " ");
+
             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
             Marker marker = gMap.addMarker(markerOptions);
             mMarkers.put(mMarkers.size(), marker);
@@ -596,12 +596,20 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
 
     }
 
+    public void changeflag() {
+
+        flag = false;
+    }
+
+
     @Override
     public void onClick(View v) {
 
 
 
         switch (v.getId()) {
+
+
             case R.id.locate: {
                 updateDroneLocation();
                 cameraUpdate(); // Locate the drone's place
@@ -624,8 +632,8 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
                         } else if (checkedId == R.id.grid) {
 
                             type = 2;
-                        }
-                        else{
+                        } else if (checkedId == R.id.square) {
+                            changeflag();
                             type = 2;
                         }
 
@@ -702,9 +710,10 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
 
                                 dr = 0;
 
+                                if (flag)
                                 drone_move =Coordinates.create_grid(lon, lan, Integer.parseInt(a.getText().toString()), Integer.parseInt(h.getText().toString()));
-                              //  else
-                                   // drone_move =Coordinates.create_square(lon, lan, Integer.parseInt(a.getText().toString()), Integer.parseInt(h.getText().toString()));
+                                else
+                                    drone_move = Coordinates.create_square(lon, lan, Integer.parseInt(a.getText().toString()), Integer.parseInt(h.getText().toString()));
                                 if (drone_move!=null ){
                                     add_waypoints.setEnabled(false);
                                     addMarks();
@@ -904,7 +913,7 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
     }
 
     private void configWayPointMission() {
-        // DJIWaypoint.DJIWaypointAction mstay=new DJIWaypoint.DJIWaypointAction(DJIWaypointActionType.Stay,10);
+        DJIWaypoint.DJIWaypointAction mstay = new DJIWaypoint.DJIWaypointAction(DJIWaypointActionType.Stay, 0);
         if (mWaypointMission != null) {
             mWaypointMission.finishedAction = mFinishedAction;
             mWaypointMission.headingMode = mHeadingMode;
@@ -916,7 +925,7 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
 
 
                     //mWaypointMission.getWaypointAtIndex(i).altitude = altitude_w[i];
-                    //  mWaypointMission.getWaypointAtIndex(i).addAction(mstay);
+                    mWaypointMission.getWaypointAtIndex(i).addAction(mstay);
 
                 }
 
@@ -1039,7 +1048,7 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
         DJIBaseProduct product = FPVDemoApplication.getProductInstance();
 
         if (product == null || !product.isConnected()) {
-            showToast(getString(R.string.disconnected));
+            // showToast(getString(R.string.disconnected));
         } else {
             if (null != mVideoSurface) {
                 mVideoSurface.setSurfaceTextureListener(this);

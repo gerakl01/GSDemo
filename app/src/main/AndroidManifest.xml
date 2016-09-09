@@ -50,8 +50,8 @@
             android:value="3e9d99b8bf3bbe2d8ac85b9b" />
         //TODO: Enter your app key here
         <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCw52-g5Ls9Xm6wP4onlFHHnaRaMTVtwKM" />
+            android:name="com.google.android.maps.v2.API_KEY"
+            android:value=" AIzaSyCuOeuk5fv2CgnTfltKEWe7vSClHgURGwM " />
         //TODO: Enter your Google API Key here
         <meta-data
             android:name="com.google.android.gms.version"

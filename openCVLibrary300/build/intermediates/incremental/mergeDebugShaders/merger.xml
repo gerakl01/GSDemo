@@ -1,2 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<merger version="3"><dataSet config="main"><source path="C:\Users\George\Desktop\ucy\android_kios\gs demo update\GSDemo\openCVLibrary300\src\main\shaders"/></dataSet><dataSet config="debug"><source path="C:\Users\George\Desktop\ucy\android_kios\gs demo update\GSDemo\openCVLibrary300\src\debug\shaders"/></dataSet></merger>
+<merger version="3"><dataSet config="main"><source path="/home/george/Desktop/AndroidGitProjects/GSDemo/openCVLibrary300/src/main/shaders"/></dataSet><dataSet config="debug"><source path="/home/george/Desktop/AndroidGitProjects/GSDemo/openCVLibrary300/src/debug/shaders"/></dataSet></merger>
