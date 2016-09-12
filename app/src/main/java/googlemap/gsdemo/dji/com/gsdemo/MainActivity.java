@@ -22,6 +22,8 @@ import android.view.LayoutInflater;
 import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -29,6 +31,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -97,7 +100,7 @@ import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.objdetect.Objdetect;
 
 
-public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapClickListener, OnMapReadyCallback, DJIMissionManager.MissionProgressStatusCallback, DJIBaseComponent.DJICompletionCallback,TextureView.SurfaceTextureListener,View.OnClickListener {
+public class MainActivity extends FragmentActivity implements AdapterView.OnItemSelectedListener, GoogleMap.OnMapClickListener, OnMapReadyCallback, DJIMissionManager.MissionProgressStatusCallback, DJIBaseComponent.DJICompletionCallback, TextureView.SurfaceTextureListener, View.OnClickListener {
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -172,6 +175,10 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
     CascadeClassifier mJavaDetector;
     private ImageView opencvView;
 
+    private Spinner spinner;
+    private static final String[] paths = {"Find cars", "Original mode"};
+
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -237,7 +244,6 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
         prepare = (Button) findViewById(R.id.prepare);
         start = (Button) findViewById(R.id.start);
         stop = (Button) findViewById(R.id.stop);
-        swit = (Button) findViewById(R.id.swit);
         add_waypoints.setEnabled(false);
 
 
@@ -245,7 +251,6 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
         add.setOnClickListener(this);
         add_waypoints.setOnClickListener(this);
         clear.setOnClickListener(this);
-        swit.setOnClickListener(this);
         config.setOnClickListener(this);
         prepare.setOnClickListener(this);
         start.setOnClickListener(this);
@@ -261,6 +266,17 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
         mRecordBtn = (ToggleButton) findViewById(R.id.btn_record);
         mShootPhotoModeBtn = (Button) findViewById(R.id.btn_shoot_photo_mode);
         mRecordVideoModeBtn = (Button) findViewById(R.id.btn_record_video_mode);
+
+
+        Spinner spinner = (Spinner) findViewById(R.id.camera);
+// Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.Camera_mode, android.R.layout.simple_spinner_item);
+// Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+// Apply the adapter to the spinner
+        spinner.setAdapter(adapter);
+
 
         if (null != mVideoSurface) {
             mVideoSurface.setSurfaceTextureListener(this);
@@ -601,6 +617,38 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
         flag = false;
     }
 
+    public boolean modec = true;
+
+
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        // On selecting a spinner item
+
+
+        switch (position) {
+
+            case 0:
+                mVideoSurface.setVisibility(View.VISIBLE);
+
+                modec = false;
+                break;
+            case 1:
+                mVideoSurface.setVisibility(View.INVISIBLE);
+                //opencvView.setVisibility(View.INVISIBLE);
+                modec = true;
+                break;
+
+
+        }
+        String item = parent.getItemAtPosition(position).toString();
+
+        // Showing selected spinner item
+        Toast.makeText(parent.getContext(), "Selected: " + item, Toast.LENGTH_LONG).show();
+    }
+
+    public void onNothingSelected(AdapterView<?> arg0) {
+        // TODO Auto-generated method stub
+    }
 
     @Override
     public void onClick(View v) {
@@ -1101,72 +1149,73 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
 
-        final Bitmap image = mVideoSurface.getBitmap();
-        //Bitmap bm = Bitmap.createScaledBitmap(image,100, 100, true);
-        Bitmap bm = image.copy(image.getConfig(), true);
+        if (modec) {
 
-        if(bm==null)
-            return;
-        Mat rgba = new Mat();
-        Mat gray = new Mat();
-        Mat edge = new Mat();
-        Mat edgeCanny = new Mat();
-        Mat edgeSobel = new Mat();
-        Mat edgeX = new Mat();
-        Mat edgeY = new Mat();
+            final Bitmap image = mVideoSurface.getBitmap();
+            //Bitmap bm = Bitmap.createScaledBitmap(image,100, 100, true);
+            Bitmap bm = image.copy(image.getConfig(), true);
 
-        Utils.bitmapToMat(bm, rgba);
+            if (bm == null)
+                return;
+            Mat rgba = new Mat();
+            Mat gray = new Mat();
+            Mat edge = new Mat();
+            Mat edgeCanny = new Mat();
+            Mat edgeSobel = new Mat();
+            Mat edgeX = new Mat();
+            Mat edgeY = new Mat();
 
-        Imgproc.cvtColor(rgba, gray, Imgproc.COLOR_RGBA2GRAY);
+            Utils.bitmapToMat(bm, rgba);
 
-        try {
-            // load cascade file from application resources
-            InputStream is = getResources().openRawResource(R.raw.cascade_good);
-            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-            mCascadeFile = new File(cascadeDir, "cascade_good.xml");
+            Imgproc.cvtColor(rgba, gray, Imgproc.COLOR_RGBA2GRAY);
 
-            FileOutputStream os = new FileOutputStream(mCascadeFile);
+            try {
+                // load cascade file from application resources
+                InputStream is = getResources().openRawResource(R.raw.cascade_good);
+                File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+                mCascadeFile = new File(cascadeDir, "cascade_good.xml");
 
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = is.read(buffer)) != -1) {
-                os.write(buffer, 0, bytesRead);
+                FileOutputStream os = new FileOutputStream(mCascadeFile);
+
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, bytesRead);
+                }
+                is.close();
+                os.close();
+
+                mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+
+                if (mJavaDetector.empty()) {
+                    Log.e(TAG, "Failed to load cascade classifier");
+                    mJavaDetector = null;
+                } else
+                    Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
+
+                cascadeDir.delete();
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            is.close();
-            os.close();
 
-            mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+            MatOfRect objects = new MatOfRect();
 
-            if (mJavaDetector.empty()) {
-                Log.e(TAG, "Failed to load cascade classifier");
-                mJavaDetector = null;
-            } else
-                Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
+            if (mJavaDetector != null) {
+                mJavaDetector.detectMultiScale(gray, objects, 1.1, 2, Objdetect.CASCADE_SCALE_IMAGE, new Size(40, 80), new Size());
+            }
 
-            cascadeDir.delete();
+            // Each rectangle in the faces array is a face
+            // Draw a rectangle around each face
+            Rect[] objArray = objects.toArray();
+            for (int i = 0; i < objArray.length; i++)
+                Imgproc.rectangle(rgba, objArray[i].tl(), objArray[i].br(), new Scalar(0, 255, 0, 255), 3);
 
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
+            Utils.matToBitmap(rgba, bm);
 
-        MatOfRect objects = new MatOfRect();
-
-        if (mJavaDetector != null){
-            mJavaDetector.detectMultiScale(gray, objects, 1.1, 2, Objdetect.CASCADE_SCALE_IMAGE, new Size(40, 80), new Size());
-        }
-
-        // Each rectangle in the faces array is a face
-        // Draw a rectangle around each face
-        Rect[] objArray = objects.toArray();
-        for (int i = 0; i < objArray.length; i++)
-            Imgproc.rectangle(rgba, objArray[i].tl(), objArray[i].br(), new Scalar(0, 255, 0, 255), 3);
-
-        Utils.matToBitmap(rgba, bm);
-
-        Canvas imCanvas = new Canvas(bm);
-        imCanvas.drawBitmap(bm, 0, 0, null);
-        opencvView.setImageDrawable(new BitmapDrawable(getResources(), bm));
+            Canvas imCanvas = new Canvas(bm);
+            imCanvas.drawBitmap(bm, 0, 0, null);
+            opencvView.setImageDrawable(new BitmapDrawable(getResources(), bm));
 
 //        Toast.makeText(MainActivity.this,String.format("%d - %d - %d - %d",image.getPixel(100,100)&0x000000FF,bmap.getPixel(100,100)&0x000000FF,image.getHeight(),image.getWidth()),Toast.LENGTH_SHORT).show();
 
@@ -1186,7 +1235,7 @@ public class MainActivity extends FragmentActivity implements  GoogleMap.OnMapCl
 //            e.printStackTrace();
 //        }
 //        //Toast.makeText(MainActivity.this, "Image Saved Successfully", Toast.LENGTH_LONG).show();
-
+        }
 
     }
 

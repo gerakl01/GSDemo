@@ -59,13 +59,7 @@
         android:orientation="horizontal">
 
 
-        <Button
 
-            android:id="@+id/swit"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="switch"
-            android:layout_weight="1"/>
         <Button
 
 
@@ -93,6 +87,8 @@
             android:layout_height="wrap_content"
             android:text="Stop"
             android:layout_weight="1"/>
+
+
     </LinearLayout>
 
 
@@ -134,23 +130,36 @@
              <RelativeLayout android:layout_width="0dp"
                  android:layout_height="fill_parent"
                  android:layout_weight="1" >
-         <RelativeLayout
+
+                 <Spinner
+                     android:text="Mode"
+
+                     android:layout_alignParentLeft="true"
+                     android:id="@+id/camera"
+                     android:layout_width="100dp"
+                     android:layout_height="20dp"
+                     android:layout_weight="1"
+                     android:layout_above="@+id/video_previewer_surface" />
+
+                 <RelativeLayout
              android:layout_alignParentRight="true"
              android:id="@+id/main_title_rl"
-             android:layout_width="fill_parent"
+                     android:layout_width="200dp"
              android:layout_height="20dp"
-             android:background="@color/black_overlay" >
+                     android:background="@color/black_overlay"
+                     android:layout_weight="1">
 
 
 
              <TextView
                  android:id="@+id/ConnectStatusTextViewCamera"
-                 android:layout_width="wrap_content"
+                 android:layout_width="250dp"
                  android:layout_height="wrap_content"
                  android:layout_centerInParent="true"
                  android:text="FPVDemo"
                  android:textColor="@android:color/white"
-                 android:textSize="21sp" />
+                 android:layout_weight="1"
+                 android:textSize="19sp" />
          </RelativeLayout>
 
          <TextView
@@ -163,13 +172,14 @@
              android:textColor="#ffffff"
              android:layout_alignTop="@+id/video_previewer_surface"
              android:layout_centerHorizontal="true" />
-                 
-                 
 
-             <TextureView
+                 />
+
+
+                 <TextureView
              android:id="@+id/video_previewer_surface"
              android:layout_width="match_parent"
-             android:layout_height="180dp"
+                     android:layout_height="150dp"
              android:layout_alignParentRight="true"
              android:layout_below="@id/main_title_rl"
              android:layout_gravity="center"
@@ -179,7 +189,7 @@
                  <ImageView
                      android:id="@+id/ImageFeed"
                      android:layout_width="match_parent"
-                     android:layout_height="180dp"
+                     android:layout_height="150dp"
                      android:layout_alignParentRight="true"
                      android:layout_below="@id/main_title_rl"
                      android:layout_gravity="center"
