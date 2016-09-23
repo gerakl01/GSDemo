@@ -195,7 +195,7 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
         Log.d("functionCalls","onResume");
         if (!OpenCVLoader.initDebug()) {
             Log.d("opencv", "Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
         } else {
             Log.d("opencv", "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
@@ -1209,8 +1209,7 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
             // Draw a rectangle around each face
             Rect[] objArray = objects.toArray();
             for (int i = 0; i < objArray.length; i++)
-                Imgproc.rectangle(rgba, objArray[i].tl(), objArray[i].br(), new Scalar(0, 255, 0, 255), 3);
-
+                Core.rectangle(rgba, objArray[i].tl(), objArray[i].br(), new Scalar(0, 255, 0, 255), 3);
             Utils.matToBitmap(rgba, bm);
 
             Canvas imCanvas = new Canvas(bm);
