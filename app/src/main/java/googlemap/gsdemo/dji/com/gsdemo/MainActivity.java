@@ -654,7 +654,6 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
     public void onClick(View v) {
 
 
-
         switch (v.getId()) {
 
 
