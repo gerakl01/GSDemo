@@ -656,7 +656,6 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
 
         switch (v.getId()) {
 
-
             case R.id.locate: {
                 updateDroneLocation();
                 cameraUpdate(); // Locate the drone's place
