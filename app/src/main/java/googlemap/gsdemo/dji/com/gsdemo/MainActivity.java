@@ -7,63 +7,72 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.SurfaceTexture;
+
 import android.graphics.drawable.BitmapDrawable;
-import android.location.Geocoder;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Environment;
+
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.text.style.ClickableSpan;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.SurfaceView;
+import android.view.GestureDetector;
+
+import android.view.MotionEvent;
+
 import android.view.TextureView;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
-import android.widget.RelativeLayout;
+
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-
-import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.GoogleMap;
-
-import android.support.v4.app.Fragment;
 import android.widget.ToggleButton;
 
-import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.MapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.CameraPosition;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
 
+import org.mapsforge.core.graphics.Bitmap;
+import org.mapsforge.core.model.Point;
+import org.mapsforge.map.android.graphics.AndroidGraphicFactory;
+import org.mapsforge.map.android.util.AndroidUtil;
+import org.mapsforge.map.android.view.MapView;
+import org.mapsforge.map.layer.Layer;
 
-import com.google.android.gms.maps.CameraUpdate;
+import org.mapsforge.map.layer.cache.TileCache;
+import org.mapsforge.map.layer.overlay.Marker;
+import org.mapsforge.map.layer.overlay.Polyline;
+import org.mapsforge.map.layer.renderer.TileRendererLayer;
+import org.mapsforge.map.datastore.MapDataStore;
 
-import com.google.android.gms.maps.OnMapReadyCallback;
+import org.mapsforge.map.reader.MapFile;
+import org.mapsforge.map.rendertheme.InternalRenderTheme;
+import org.mapsforge.core.graphics.Color;
+import org.mapsforge.core.graphics.Paint;
+import org.mapsforge.core.graphics.Style;
 
+import org.mapsforge.core.model.LatLong;
 
-import com.google.android.gms.vision.barcode.Barcode;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.text.DecimalFormat;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.LinkedList;
+import java.util.List;
 
 import dji.sdk.Camera.DJICamera;
 import dji.sdk.Camera.DJICameraSettingsDef;
@@ -82,14 +91,12 @@ import dji.sdk.base.DJIBaseProduct;
 import dji.sdk.base.DJIError;
 
 
-import googlemap.gsdemo.dji.com.gsdemo.Coordinates;
-
+import org.mapsforge.map.util.MapViewProjection;
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfRect;
 import org.opencv.core.Rect;
@@ -100,7 +107,10 @@ import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.objdetect.Objdetect;
 
 
-public class MainActivity extends FragmentActivity implements AdapterView.OnItemSelectedListener, GoogleMap.OnMapClickListener, OnMapReadyCallback, DJIMissionManager.MissionProgressStatusCallback, DJIBaseComponent.DJICompletionCallback, TextureView.SurfaceTextureListener, View.OnClickListener {
+public class MainActivity extends FragmentActivity implements DJIMissionManager.MissionProgressStatusCallback, DJIBaseComponent.DJICompletionCallback, TextureView.SurfaceTextureListener, View.OnClickListener {
+
+
+
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -108,11 +118,12 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS: {
                     Log.d("opencv", "OpenCV loaded successfully");
-                } break;
-                default:
-                {
+                }
+                break;
+                default: {
                     super.onManagerConnected(status);
-                } break;
+                }
+                break;
             }
         }
     };
@@ -123,6 +134,10 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
 
     protected DJICamera.CameraReceivedVideoDataCallback mReceivedVideoDataCallBack = null;
 
+
+    // public CameraDrone dc = new CameraDrone(MainActivity.this);
+
+
     // Codec for video live view
     protected DJICodecManager mCodecManager = null;
     protected TextView mConnectStatusTextView;
@@ -130,54 +145,58 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
     protected TextureView mVideoSurface = null;
     private Button mCaptureBtn, mShootPhotoModeBtn, mRecordVideoModeBtn;
     private ToggleButton mRecordBtn;
-    private TextView recordingTime;
+    protected TextView recordingTime;
 
 
     //Main Activity variables
     protected static final String TAG = "GSDemoActivity";
 
-    private GoogleMap gMap;
 
-    public Button locate, add, add_waypoints, clear;
+    public Button add, clear, alti_stay;
+    public static Button add_waypoints;
+    private ImageButton locate;
     private Button swit, config, prepare, start, stop;
+    private CheckBox photo;
 
-    public boolean isAdd = false, flag = true;
 
+    public static boolean isAdd = false, flag = true, photocheck = false, change = false, addpoint = false;
+    private static final String MAP_FILE = "cyprus.map";
+    public static MapView mapView;
 
-    private double droneLocationLat = 181, droneLocationLng = 181;
-    private final Map<Integer, Marker> mMarkers = new ConcurrentHashMap<Integer, Marker>();
-    private Marker droneMarker = null;
+    private double droneLocationLat = 35.469352, droneLocationLng = 33.683667, ndroneLocationLat, ndroneLocationLng;
 
-    private float altitude_w[] = new float[30];
-    private float altitude = 100.0f;
+    //private final Map<Integer, Marker> mMarkers = new ConcurrentHashMap<Integer, Marker>();
+    private Layer droneMarker = null;
+
+    protected static float altitude_w[] = new float[30];
+    protected float altitude = 100.0f;
 
     private float mSpeed = 10.0f;
 
-    public int i = 0, corner_points= 0, type;
+    public static int i = 0, corner_points = 0, type;
+    protected static int newalti;
     public Coordinates points[];
 
-    public Coordinates[] corner = new Coordinates[2];
+    public static Coordinates[] corner = new Coordinates[2];
 
-    public Coordinates[] drone_move;
+    public static Coordinates[] drone_move;
+    private Mark m;
 
-    public int drone_num[][];
-
-    private DJIWaypointMission mWaypointMission;
+    public static List<Layer> marks;
+    protected static DJIWaypointMission mWaypointMission;
     private DJIMissionManager mMissionManager;
     private DJIFlightController mFlightController;
-
-    public String altitutes_w[] = new String[30];
+    public static boolean tap;
 
     private DJIWaypointMission.DJIWaypointMissionFinishedAction mFinishedAction = DJIWaypointMission.DJIWaypointMissionFinishedAction.NoAction;
     private DJIWaypointMission.DJIWaypointMissionHeadingMode mHeadingMode = DJIWaypointMission.DJIWaypointMissionHeadingMode.Auto;
 
-    private File mCascadeFile;
+    public File mCascadeFile;
     CascadeClassifier mJavaDetector;
-    private ImageView opencvView;
+    public ImageView opencvView;
 
-    private Spinner spinner;
-    private static final String[] paths = {"Find cars", "Original mode"};
-
+    public int minWidth, minHeight;
+    public int imWidth = 800, imHeight = 600;
 
     @Override
     protected void onResume() {
@@ -186,13 +205,13 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
         initMissionManager();
         initPreviewer();
         updateTitleBar();
-        if(mVideoSurface == null) {
+        if (mVideoSurface == null) {
             Log.e(TAG, "mVideoSurface is null");
         }
         Log.e(TAG, "onPause");
         uninitPreviewer();
 
-        Log.d("functionCalls","onResume");
+        Log.d("functionCalls", "onResume");
         if (!OpenCVLoader.initDebug()) {
             Log.d("opencv", "Internal OpenCV library not found. Using OpenCV Manager for initialization");
             OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
@@ -234,9 +253,22 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
         });
     }
 
+
+    public void onCheckboxClicked(View v) {
+
+
+        if (((CheckBox) v).isChecked())
+            photocheck = true;
+        else
+            photocheck = true;
+    }
+
+
     private void initUI() {
 
-        locate = (Button) findViewById(R.id.locate);
+        photo = (CheckBox) findViewById(R.id.photo1);
+        alti_stay = (Button) findViewById(R.id.alt_stay);
+        locate = (ImageButton) findViewById(R.id.locate);
         add = (Button) findViewById(R.id.add);
         add_waypoints = (Button) findViewById(R.id.add_w);
         clear = (Button) findViewById(R.id.clear);
@@ -246,7 +278,8 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
         stop = (Button) findViewById(R.id.stop);
         add_waypoints.setEnabled(false);
 
-
+//        photo.setOnClickListener(this);
+        alti_stay.setOnClickListener(this);
         locate.setOnClickListener(this);
         add.setOnClickListener(this);
         add_waypoints.setOnClickListener(this);
@@ -255,9 +288,10 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
         prepare.setOnClickListener(this);
         start.setOnClickListener(this);
         stop.setOnClickListener(this);
+        locate.setEnabled(false);
         mConnectStatusTextView = (TextView) findViewById(R.id.ConnectStatusTextViewCamera);
         // init mVideoSurface
-        mVideoSurface = (TextureView)findViewById(R.id.video_previewer_surface);
+        mVideoSurface = (TextureView) findViewById(R.id.video_previewer_surface);
 
         opencvView = (ImageView) findViewById(R.id.ImageFeed);
 
@@ -269,6 +303,7 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
 
 
         Spinner spinner = (Spinner) findViewById(R.id.camera);
+
 // Create an ArrayAdapter using the string array and a default spinner layout
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
                 R.array.Camera_mode, android.R.layout.simple_spinner_item);
@@ -277,6 +312,190 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
 // Apply the adapter to the spinner
         spinner.setAdapter(adapter);
 
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            @Override
+            public void onNothingSelected(AdapterView<?> arg0) {
+                mVideoSurface.setVisibility(View.VISIBLE);
+                opencvView.setVisibility(View.INVISIBLE);
+                modec = false;
+            }
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View selectedItemView, int position, long id) {
+                switch (position) {
+
+                    case 0:
+                        mVideoSurface.setVisibility(View.VISIBLE);
+                        opencvView.setVisibility(View.INVISIBLE);
+                        modec = false;
+                        break;
+                    case 1:
+                        minWidth = 40;
+                        minHeight = 40;
+                        //mVideoSurface.setVisibility(View.INVISIBLE);
+                        opencvView.setVisibility(View.VISIBLE);
+                        modec = true;
+
+                        try {
+                            // load cascade file from application resources
+                            InputStream is = getResources().openRawResource(R.raw.cascade_good);
+                            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+                            mCascadeFile = new File(cascadeDir, "cascade_good.xml");
+
+                            FileOutputStream os = new FileOutputStream(mCascadeFile);
+
+                            byte[] buffer = new byte[4096];
+                            int bytesRead;
+                            while ((bytesRead = is.read(buffer)) != -1) {
+                                os.write(buffer, 0, bytesRead);
+                            }
+                            is.close();
+                            os.close();
+
+                            mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+
+                            if (mJavaDetector.empty()) {
+                                Log.e(TAG, "Failed to load cascade classifier");
+                                mJavaDetector = null;
+                            } else
+                                Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
+
+                            cascadeDir.delete();
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+                        break;
+                    case 2:
+                        minWidth = 48;
+                        minHeight = 96;
+                        opencvView.setVisibility(View.VISIBLE);
+                        modec = true;
+
+                        //mVideoSurface.setVisibility(View.INVISIBLE);
+
+                        try {
+                            // load cascade file from application resources
+                            InputStream is = getResources().openRawResource(R.raw.hogcascade_pedestrians);
+                            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+                            mCascadeFile = new File(cascadeDir, "hogcascade_pedestrians.xml");
+
+                            FileOutputStream os = new FileOutputStream(mCascadeFile);
+
+                            byte[] buffer = new byte[4096];
+                            int bytesRead;
+                            while ((bytesRead = is.read(buffer)) != -1) {
+                                os.write(buffer, 0, bytesRead);
+                            }
+                            is.close();
+                            os.close();
+
+                            mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+
+                            if (mJavaDetector.empty()) {
+                                Log.e(TAG, "Failed to load cascade classifier");
+                                mJavaDetector = null;
+                            } else
+                                Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
+
+                            cascadeDir.delete();
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+
+                        break;
+                    case 3:
+                        minWidth = 50;
+                        minHeight = 20;
+                        //mVideoSurface.setVisibility(View.INVISIBLE);
+                        opencvView.setVisibility(View.VISIBLE);
+                        modec = true;
+
+                        try {
+                            // load cascade file from application resources
+                            InputStream is = getResources().openRawResource(R.raw.side_car);
+                            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+                            mCascadeFile = new File(cascadeDir, "side_car.xml");
+
+                            FileOutputStream os = new FileOutputStream(mCascadeFile);
+
+                            byte[] buffer = new byte[4096];
+                            int bytesRead;
+                            while ((bytesRead = is.read(buffer)) != -1) {
+                                os.write(buffer, 0, bytesRead);
+                            }
+                            is.close();
+                            os.close();
+
+                            mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+
+                            if (mJavaDetector.empty()) {
+                                Log.e(TAG, "Failed to load cascade classifier");
+                                mJavaDetector = null;
+                            } else
+                                Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
+
+                            cascadeDir.delete();
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+                        break;
+                }
+
+
+                String item = parent.getItemAtPosition(position).toString();
+
+                // Showing selected spinner item
+                Toast.makeText(parent.getContext(), "Selected: " + item, Toast.LENGTH_LONG).show();
+
+            }
+        });
+
+
+/*        Spinner SpinImageRes = (Spinner) findViewById(R.id.image_resol);
+        ArrayAdapter<CharSequence> adapterImageRes = ArrayAdapter.createFromResource(this,
+                R.array.Image_Resolution, android.R.layout.simple_spinner_item);
+
+        SpinImageRes.setAdapter(adapter);
+
+        SpinImageRes.setOnClickListener(this);
+
+        SpinImageRes.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            @Override
+            public void onNothingSelected(AdapterView<?> arg0) {
+                imHeight = 120;
+                imWidth = 160;
+            }
+
+            @Override
+            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+                switch (position) {
+                    case 0:
+                        imHeight = 120;
+                        imWidth = 160;
+                        break;
+                    case 1:
+                        imHeight = 320;
+                        imWidth = 240;
+                        break;
+                    case 2:
+                        imHeight = 640;
+                        imWidth = 480;
+                        break;
+                    case 3:
+                        imHeight = 1024;
+                        imWidth = 600;
+                        break;
+                }
+            }
+        });*/
 
         if (null != mVideoSurface) {
             mVideoSurface.setSurfaceTextureListener(this);
@@ -293,12 +512,23 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
-                    startRecord();
+                    new CameraDrone(MainActivity.this).startRecord();
                 } else {
-                    stopRecord();
+                    new CameraDrone(MainActivity.this).stopRecord();
                 }
             }
         });
+    }
+
+    private void cameraUpdate() {
+
+
+        this.mapView.setCenter(new LatLong(droneLocationLat, droneLocationLng));
+
+
+        this.mapView.setZoomLevel((byte) 20);
+
+
     }
 
     @Override
@@ -321,39 +551,84 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
                     , 1);
         }
 
+        marks = new LinkedList<>();
+        // m=new Mark(getApplicationContext());
+        //final GestureDetector gestureDetector = new GestureDetector(this, new SingleTDetector());
 
+        TapMap tm = new TapMap(getApplicationContext());
+
+        TapMap.SingleTDetector s = tm.new SingleTDetector();
+        final GestureDetector gestureDetector = new GestureDetector(this, s);
+
+
+        AndroidGraphicFactory.createInstance(this.getApplication());
+        // this.mapView = getMapView();
+        // mapView = (MapView)findViewById(R.id.mapview);
+        //this.mapView = new MapView(this);
         setContentView(R.layout.activity_main);
 
+        this.mapView = (MapView) findViewById(R.id.mapview);
+
+
+        this.mapView.setClickable(true);
+        this.mapView.getMapScaleBar().setVisible(true);
+        this.mapView.setBuiltInZoomControls(true);
+        this.mapView.setZoomLevelMin((byte) 10);
+        this.mapView.setZoomLevelMax((byte) 20);
+        // create a tile cache of suitable size
+        TileCache tileCache = AndroidUtil.createTileCache(this, "mapcache",
+                this.mapView.getModel().displayModel.getTileSize(), 1f,
+                this.mapView.getModel().frameBufferModel.getOverdrawFactor());
+
+        // tile renderer layer using internal render theme
+        MapDataStore mapDataStore = new MapFile(new File(Environment.getExternalStorageDirectory(), MAP_FILE));
+        TileRendererLayer tileRendererLayer = new TileRendererLayer(tileCache, mapDataStore,
+                this.mapView.getModel().mapViewPosition, AndroidGraphicFactory.INSTANCE);
+        tileRendererLayer.setXmlRenderTheme(InternalRenderTheme.OSMARENDER);
+
+        // only once a layer is associated with a mapView the rendering starts
+        this.mapView.getLayerManager().getLayers().add(tileRendererLayer);
+        this.mapView.setCenter(new LatLong(35.14448546, 33.40969473));
+
+
+        this.mapView.setZoomLevel((byte) 12);
+
+        initUI();
+
+
+        mapView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                gestureDetector.onTouchEvent(event);
+                return false;
+            }
+        });
         IntentFilter filter = new IntentFilter();
         filter.addAction(DJIDemoApplication.FLAG_CONNECTION_CHANGE);
         registerReceiver(mReceiver, filter);
 
-        initUI();
 
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-
-        mapFragment.getMapAsync(this);
-
-
+        // new CameraDrone(getApplicationContext()).intCamera();
         //Drone camera
         // The callback for receiving the raw H264 video data for camera live view
         mReceivedVideoDataCallBack = new DJICamera.CameraReceivedVideoDataCallback() {
 
             @Override
             public void onResult(byte[] videoBuffer, int size) {
-                if(mCodecManager != null){
+                if (mCodecManager != null) {
                     // Send the raw H264 video data to codec manager for decoding
                     mCodecManager.sendDataToDecoder(videoBuffer, size);
-                }else {
+                } else {
                     Log.e(TAG, "mCodecManager is null");
                 }
             }
         };
 
+
         DJICamera camera = FPVDemoApplication.getCameraInstance();
 
         if (camera != null) {
+
             camera.setDJICameraUpdatedSystemStateCallback(new DJICamera.CameraUpdatedSystemStateCallback() {
                 @Override
                 public void onResult(DJICamera.CameraSystemState cameraSystemState) {
@@ -376,10 +651,9 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
                                 /*
                                  * Update recordingTime TextView visibility and mRecordBtn's check state
                                  */
-                                if (isVideoRecording){
+                                if (isVideoRecording) {
                                     recordingTime.setVisibility(View.VISIBLE);
-                                }else
-                                {
+                                } else {
                                     recordingTime.setVisibility(View.INVISIBLE);
                                 }
                             }
@@ -387,10 +661,10 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
                     }
                 }
             });
+
         }
-
-
     }
+
 
     protected BroadcastReceiver mReceiver = new BroadcastReceiver() {
 
@@ -427,7 +701,6 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
     }
 
     private void initFlightController() {
-
         DJIBaseProduct product = DJIDemoApplication.getProductInstance();
         if (product != null && product.isConnected()) {
             if (product instanceof DJIAircraft) {
@@ -435,14 +708,23 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
             }
         }
 
-        if (mFlightController != null) {
-            mFlightController.setUpdateSystemStateCallback(new DJIFlightControllerDelegate.FlightControllerUpdateSystemStateCallback() {
 
+        if (mFlightController != null) {
+            locate.setEnabled(true);
+            mFlightController.setUpdateSystemStateCallback(new DJIFlightControllerDelegate.FlightControllerUpdateSystemStateCallback() {
                 @Override
                 public void onResult(DJIFlightControllerDataType.DJIFlightControllerCurrentState state) {
+
+
                     droneLocationLat = state.getAircraftLocation().getLatitude();
                     droneLocationLng = state.getAircraftLocation().getLongitude();
-                    updateDroneLocation();
+
+
+                    updateDroneLocation();//}
+
+
+
+
                 }
             });
         }
@@ -464,83 +746,87 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
         setResultToToast("Execution finished: " + (error == null ? "Success drone!" : error.getDescription()));
     }
 
-    private void setUpMap() {
-        gMap.setOnMapClickListener(this);// add the listener for click for amap object
-
-    }
-
-    @Override
-    public void onMapClick(LatLng point) {
-        if (type == 1) {
-            if (isAdd == true) {
-                markWaypoint(point);
-                DJIWaypoint mWaypoint = new DJIWaypoint(point.latitude, point.longitude, altitude);
-                //Add Waypoints to Waypoint arraylist;
-                if (mWaypointMission != null) {
-                    //  mWaypointMission.addWaypoint(mWaypoint);
-                }
-            } else {
-                setResultToToast("Cannot Add Waypoint");
-            }
-        } else if (type == 2) {
-
-            if ( corner_points==1)
-                add_waypoints.setEnabled(true);
-            if ( corner_points< 2) {
-
-                gMap.addMarker(new MarkerOptions().position(point).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-                corner[ corner_points ] = new Coordinates(point.latitude, point.longitude);
-                corner_points ++;
-            } else {
-                setResultToToast("Only two points can add");
-
-
-
-            }
-        }
-
-    }
 
     public void addMarks() {
 
 
-        /* for (int i = 0; i < drone_point.length; i++) {
-            for (int j = 0; j < drone_point[0].length; j++) {
-                LatLng point = new LatLng(drone_point[i][j].lat, drone_point[i][j].lon);
-
-                Log.e(TAG, "Point "  + " "+i+" "+j);
-                gMap.addMarker(new MarkerOptions().position(point).title("Drone " + drone_num[i][j]).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
-                markWaypoint(point);
+        for (int i = 0; i < altitude_w.length; i++) {
+            altitude_w[i] = 0;
+        }
 
 
+        final LatLong LatLong = new LatLong(drone_move[0].lat, drone_move[0].lon);
+
+        Drawable drawable = getResources().getDrawable(R.drawable.red_mark);
+        Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
+        bitmap.incrementRefCount();
+
+
+        Mark k = new Mark(LatLong, bitmap, 0, -bitmap.getHeight() / 2);
+        DJIWaypoint mWaypoint = new DJIWaypoint(LatLong.latitude, LatLong.longitude, altitude);
+
+
+        boolean flag4 = false;
+        Run r;
+        k.setOnTabAction(r = new Run(0, getApplicationContext()));
+
+        marks.add(k);
+
+        mapView.getLayerManager().getLayers().add(k);
+
+
+        //Add Waypoints to Waypoint arraylist;
+        if (mWaypointMission != null) {
+            mWaypointMission.addWaypoint(mWaypoint);
+        }
+
+        for (int i = 1; i < drone_move.length; i++) {
+            Paint paint = AndroidGraphicFactory.INSTANCE.createPaint();
+            paint.setColor(Color.BLUE);
+            paint.setStyle(Style.STROKE);
+            paint.setStrokeWidth(8);
+
+            if (i + 1 < drone_move.length) {
+                Polyline polyline = new Polyline(paint, AndroidGraphicFactory.INSTANCE);
+
+                if (i == 1) {
+                    List<LatLong> latLongs = polyline.getLatLongs();
+                    latLongs.add(new LatLong(drone_move[0].lat, drone_move[0].lon));
+
+                    latLongs.add(new LatLong(drone_move[1].lat, drone_move[1].lon));
+                    latLongs.add(new LatLong(drone_move[2].lat, drone_move[2].lon));
+                    marks.add(polyline);
+
+                } else {
+                    List<LatLong> latLongs = polyline.getLatLongs();
+                    latLongs.add(new LatLong(drone_move[i].lat, drone_move[i].lon));
+                    latLongs.add(new LatLong(drone_move[i + 1].lat, drone_move[i + 1].lon));
+                }
+                mapView.getLayerManager().getLayers().add(polyline);
+                marks.add(polyline);
             }
-        }*/
 
 
-        for (int i = 0; i < drone_move.length; i++) {
+            final LatLong LatLong2 = new LatLong(drone_move[i].lat, drone_move[i].lon);
 
-            LatLng point = new LatLng(drone_move[i].lat, drone_move[i].lon);
+            k = new Mark(LatLong2, bitmap, 0, -bitmap.getHeight() / 2);
+            mapView.getLayerManager().getLayers().add(k);
+
+            k.setOnTabAction(r = new Run(i, getApplicationContext()));
 
 
-            Log.d(TAG, "drone move " + i);
-            MarkerOptions markerOptions = new MarkerOptions();
-            markerOptions.position(point);
-            markerOptions.title(i + " ");
-
-            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
-            Marker marker = gMap.addMarker(markerOptions);
-            mMarkers.put(mMarkers.size(), marker);
-
-            DJIWaypoint mWaypoint = new DJIWaypoint(point.latitude, point.longitude, altitude);
+            mWaypoint = new DJIWaypoint(LatLong2.latitude, LatLong2.longitude, altitude);
             //Add Waypoints to Waypoint arraylist;
             if (mWaypointMission != null) {
                 mWaypointMission.addWaypoint(mWaypoint);
             }
 
-
+            marks.add(k);
         }
+        // mapView.getLayerManager().getLayers().addAll(marks);
 
     }
+
 
     public static boolean checkGpsCoordination(double latitude, double longitude) {
         return (latitude > -90 && latitude < 90 && longitude > -180 && longitude < 180) && (latitude != 0f && longitude != 0f);
@@ -550,35 +836,47 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
     // Update the drone location based on states from MCU.
     private void updateDroneLocation() {
 
-        LatLng pos = new LatLng(droneLocationLat, droneLocationLng);
-        //Create MarkerOptions object
-        final MarkerOptions markerOptions = new MarkerOptions();
-        markerOptions.position(pos);
-        markerOptions.icon(BitmapDescriptorFactory.fromResource(R.drawable.aircraft));
+
+        //this.mapView.setZoomLevel((byte) 12);
+
 
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 if (droneMarker != null) {
-                    droneMarker.remove();
+                    mapView.getLayerManager().getLayers().remove(droneMarker);
                 }
 
                 if (checkGpsCoordination(droneLocationLat, droneLocationLng)) {
-                    droneMarker = gMap.addMarker(markerOptions);
+                    final LatLong pos = new LatLong(droneLocationLat, droneLocationLng);
+
+                    Drawable drawable = getResources().getDrawable(R.drawable.aircraft);
+                    Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
+                    bitmap.incrementRefCount();
+
+
+                    Mark droneMarker = new Mark(pos, bitmap, 0, -bitmap.getHeight() / 2);
+
+                    mapView.getLayerManager().getLayers().add(droneMarker);
+                    marks.add(droneMarker);
+                    //cameraUpdate();
+
                 }
 
             }
         });
+
+
     }
 
 
-    private void markWaypoint(LatLng point) {
-        //Create MarkerOptions object
+    private void markWaypoint(LatLong point) {
+       /* //Create MarkerOptions object
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(point);
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
         Marker marker = gMap.addMarker(markerOptions);
-        mMarkers.put(mMarkers.size(), marker);
+        mMarkers.put(mMarkers.size(), marker);*/
 
         /*LinearLayout wayPointSettings = (LinearLayout) getLayoutInflater().inflate(R.layout.altitute_waypoints, null);
 
@@ -617,38 +915,10 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
         flag = false;
     }
 
-    public boolean modec = true;
+    public boolean modec = false;
 
 
-    @Override
-    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-        // On selecting a spinner item
-
-
-        switch (position) {
-
-            case 0:
-                mVideoSurface.setVisibility(View.VISIBLE);
-
-                modec = false;
-                break;
-            case 1:
-                mVideoSurface.setVisibility(View.INVISIBLE);
-                //opencvView.setVisibility(View.INVISIBLE);
-                modec = true;
-                break;
-
-
-        }
-        String item = parent.getItemAtPosition(position).toString();
-
-        // Showing selected spinner item
-        Toast.makeText(parent.getContext(), "Selected: " + item, Toast.LENGTH_LONG).show();
-    }
-
-    public void onNothingSelected(AdapterView<?> arg0) {
-        // TODO Auto-generated method stub
-    }
+    static boolean flag1 = false, a1 = false, h1 = false;
 
     @Override
     public void onClick(View v) {
@@ -656,57 +926,81 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
 
         switch (v.getId()) {
 
+
+            case R.id.alt_stay: {
+
+                if (change == false) {
+                    window_change_altitute();
+                    change = true;
+                    alti_stay.setText("Finish");
+
+                } else {
+
+                    change = false;
+                    alti_stay.setText("Points settings");
+
+                }
+
+                break;
+            }
+
             case R.id.locate: {
-                updateDroneLocation();
-                cameraUpdate(); // Locate the drone's place
+
+
+                if (checkGpsCoordination(droneLocationLat, droneLocationLng)) {
+                    updateDroneLocation();
+                    cameraUpdate();
+
+                }
+
+
                 break;
             }
             case R.id.add: {
 
-                if (!isAdd){
+                if (!isAdd) {
 
-                LinearLayout chooseAction = (LinearLayout) getLayoutInflater().inflate(R.layout.choose_action, null);
-                RadioGroup Raction = (RadioGroup) chooseAction.findViewById(R.id.choose);
+                    LinearLayout chooseAction = (LinearLayout) getLayoutInflater().inflate(R.layout.choose_action, null);
+                    RadioGroup Raction = (RadioGroup) chooseAction.findViewById(R.id.choose);
 
-                Raction.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+                    Raction.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
 
-                    @Override
-                    public void onCheckedChanged(RadioGroup group, int checkedId) {
-                        if (checkedId == R.id.drone) {
-                            type = 1;
-                            enableDisableAdd();
-                        } else if (checkedId == R.id.grid) {
+                        @Override
+                        public void onCheckedChanged(RadioGroup group, int checkedId) {
+                            if (checkedId == R.id.drone) {
+                                type = 1;
+                                enableDisableAdd();
+                            } else if (checkedId == R.id.grid) {
 
-                            type = 2;
-                        } else if (checkedId == R.id.square) {
-                            changeflag();
-                            type = 2;
+                                type = 2;
+                            } else if (checkedId == R.id.square) {
+                                changeflag();
+                                type = 2;
+                            }
+
                         }
 
-                    }
-
-                });
-                new AlertDialog.Builder(this)
-                        .setTitle("")
-                        .setView(chooseAction)
-                        .setPositiveButton("Finish", new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
+                    });
+                    new AlertDialog.Builder(this)
+                            .setTitle("")
+                            .setView(chooseAction)
+                            .setPositiveButton("Finish", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
 
 
-                            }
+                                }
 
-                        })
-                        .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                dialog.cancel();
-                            }
+                            })
+                            .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    dialog.cancel();
+                                }
 
-                        })
-                        .create()
-                        .show();
-                }
-                else
-                enableDisableAdd();
+                            })
+                            .create()
+                            .show();
+                } else
+                    enableDisableAdd();
 
                 break;
             }
@@ -714,92 +1008,19 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
             case R.id.add_w: {
 
 
-                LinearLayout wayPointSettings = (LinearLayout) getLayoutInflater().inflate(R.layout.labyrinth_settings, null);
-                final double[] lon = new double[2];
-                final double[] lan = new double[2];
+                init_waypoints_settings();
 
-                final EditText a = (EditText) wayPointSettings.findViewById(R.id.ang);
-                final EditText h = (EditText) wayPointSettings.findViewById(R.id.h);
-
-               /* lon[0] = 33.40969473;
-
-                lan[0] = 35.14448546;
-                lon[1] = 33.40926558;
-                lan[1] = 35.1434756;*/
-
-
-                if (corner[0].lon<corner[1].lon){
-                    lon[0] = corner[0].lon;
-
-                    lan[0] = corner[0].lat;
-                    lon[1] = corner[1].lon;
-                    lan[1] = corner[1].lat;
-                }
-                else{
-                    lon[1] = corner[0].lon;
-
-                    lan[1] = corner[0].lat;
-                    lon[0] = corner[1].lon;
-                    lan[0] = corner[1].lat;
-                }
-
-
-
-                new AlertDialog.Builder(this)
-                        .setTitle("")
-                        .setView(wayPointSettings)
-                        .setPositiveButton("Finish", new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                corner_points  = 0;
-
-                                mid = 0;
-
-                                dr = 0;
-
-                                if (flag)
-                                drone_move =Coordinates.create_grid(lon, lan, Integer.parseInt(a.getText().toString()), Integer.parseInt(h.getText().toString()));
-                                else
-                                    drone_move = Coordinates.create_square(lon, lan, Integer.parseInt(a.getText().toString()), Integer.parseInt(h.getText().toString()));
-                                if (drone_move!=null ){
-                                    add_waypoints.setEnabled(false);
-                                    addMarks();
-                                }
-                                else{
-                                    setResultToToast("mikos i platos ine miden ");
-                                    corner_points  = 0;
-                                }
-
-
-
-                            }
-
-                        })
-                        .create()
-                        .show();
-
-
-               /* lon[0]=35.111111;
-
-                lon[1]=35.22222;
-
-                lan[0]=37.99999;
-
-                lan[1]=37.999888;
-                create_square( lon,lan,40,22);
-                addMarks();*/
 
                 break;
             }
+
             case R.id.clear: {
                 add_waypoints.setEnabled(false);
-                corner_points=0;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        gMap.clear();
-                    }
+                corner_points = 0;
 
-                });
+
+                for (int i = 0; i < marks.size(); i++)
+                    mapView.getLayerManager().getLayers().remove(marks.get(i));
                 if (mWaypointMission != null) {
                     mWaypointMission.removeAllWaypoints(); // Remove all the waypoints added to the task
                 }
@@ -823,16 +1044,16 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
                 stopWaypointMission();
                 break;
             }
-            case R.id.btn_capture:{
-                captureAction();
+            case R.id.btn_capture: {
+                new CameraDrone(MainActivity.this).captureAction();
                 break;
             }
-            case R.id.btn_shoot_photo_mode:{
-                switchCameraMode(DJICameraSettingsDef.CameraMode.ShootPhoto);
+            case R.id.btn_shoot_photo_mode: {
+                new CameraDrone(MainActivity.this).switchCameraMode(DJICameraSettingsDef.CameraMode.ShootPhoto);
                 break;
             }
-            case R.id.btn_record_video_mode:{
-                switchCameraMode(DJICameraSettingsDef.CameraMode.RecordVideo);
+            case R.id.btn_record_video_mode: {
+                new CameraDrone(MainActivity.this).switchCameraMode(DJICameraSettingsDef.CameraMode.RecordVideo);
                 break;
             }
             default:
@@ -840,13 +1061,6 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
         }
     }
 
-    private void cameraUpdate() {
-        LatLng pos = new LatLng(droneLocationLat, droneLocationLng);
-        float zoomlevel = (float) 18.0;
-        CameraUpdate cu = CameraUpdateFactory.newLatLngZoom(pos, zoomlevel);
-        gMap.moveCamera(cu);
-
-    }
 
     private void enableDisableAdd() {
         if (isAdd == false) {
@@ -960,6 +1174,7 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
 
     private void configWayPointMission() {
         DJIWaypoint.DJIWaypointAction mstay = new DJIWaypoint.DJIWaypointAction(DJIWaypointActionType.Stay, 0);
+        DJIWaypoint.DJIWaypointAction tphoto = new DJIWaypoint.DJIWaypointAction(DJIWaypointActionType.StartTakePhoto, 1);
         if (mWaypointMission != null) {
             mWaypointMission.finishedAction = mFinishedAction;
             mWaypointMission.headingMode = mHeadingMode;
@@ -967,16 +1182,23 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
 
             if (mWaypointMission.waypointsList.size() > 0) {
                 for (int i = 0; i < mWaypointMission.waypointsList.size(); i++) {
-                    mWaypointMission.getWaypointAtIndex(i).altitude = altitude;
 
+                    if (altitude_w[i] > 0) {
 
+                        mWaypointMission.getWaypointAtIndex(i).altitude = altitude_w[i];
+                    } else
+                        mWaypointMission.getWaypointAtIndex(i).altitude = altitude;
                     //mWaypointMission.getWaypointAtIndex(i).altitude = altitude_w[i];
                     mWaypointMission.getWaypointAtIndex(i).addAction(mstay);
+                    if (photocheck) {
+
+                        mWaypointMission.getWaypointAtIndex(i).addAction(tphoto);
+                        photocheck = false;
+
+                    }
+
 
                 }
-
-                setResultToToast("Set Waypoint attitude successfully");
-
             }
         }
     }
@@ -1032,46 +1254,26 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
         }
     }
 
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        if (gMap == null) {
-            gMap = googleMap;
-            setUpMap();
-        }
 
-        LatLng shenzhen = new LatLng(22.5362, 113.9454);
-        gMap.addMarker(new MarkerOptions().position(shenzhen).title("Marker in Shenzhen"));
-        gMap.moveCamera(CameraUpdateFactory.newLatLng(shenzhen));
-    }
-
-    public int  mid = 0 ,dr = 0;
-
-
-
-
-
-
-
+    public int mid = 0, dr = 0;
 
 
     //Drone Camera
 
 
-
-
     private void updateTitleBar() {
-        if(mConnectStatusTextView == null) return;
+        if (mConnectStatusTextView == null) return;
         boolean ret = false;
         DJIBaseProduct product = FPVDemoApplication.getProductInstance();
         if (product != null) {
-            if(product.isConnected()) {
+            if (product.isConnected()) {
                 //The product is connected
                 mConnectStatusTextView.setText(FPVDemoApplication.getProductInstance().getModel() + " Connected");
                 ret = true;
             } else {
-                if(product instanceof DJIAircraft) {
-                    DJIAircraft aircraft = (DJIAircraft)product;
-                    if(aircraft.getRemoteController() != null && aircraft.getRemoteController().isConnected()) {
+                if (product instanceof DJIAircraft) {
+                    DJIAircraft aircraft = (DJIAircraft) product;
+                    if (aircraft.getRemoteController() != null && aircraft.getRemoteController().isConnected()) {
                         // The product is not connected, but the remote controller is connected
                         mConnectStatusTextView.setText("only RC Connected");
                         ret = true;
@@ -1080,7 +1282,7 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
             }
         }
 
-        if(!ret) {
+        if (!ret) {
             // The product or the remote controller are not connected.
             mConnectStatusTextView.setText("Disconnected");
         }
@@ -1089,6 +1291,7 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
     protected void onProductChange() {
         initPreviewer();
     }
+
     private void initPreviewer() {
 
         DJIBaseProduct product = FPVDemoApplication.getProductInstance();
@@ -1101,7 +1304,7 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
             }
             if (!product.getModel().equals(DJIBaseProduct.Model.UnknownAircraft)) {
                 DJICamera camera = product.getCamera();
-                if (camera != null){
+                if (camera != null) {
                     // Set the callback
                     camera.setDJICameraReceivedVideoDataCallback(mReceivedVideoDataCallBack);
                 }
@@ -1111,7 +1314,7 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
 
     private void uninitPreviewer() {
         DJICamera camera = FPVDemoApplication.getCameraInstance();
-        if (camera != null){
+        if (camera != null) {
             // Reset the callback
             FPVDemoApplication.getCameraInstance().setDJICameraReceivedVideoDataCallback(null);
         }
@@ -1135,7 +1338,7 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
 
     @Override
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-        Log.e(TAG,"onSurfaceTextureDestroyed");
+        Log.e(TAG, "onSurfaceTextureDestroyed");
         if (mCodecManager != null) {
             mCodecManager.cleanSurface();
             mCodecManager = null;
@@ -1146,32 +1349,31 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
 
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-
         if (modec) {
 
-            final Bitmap image = mVideoSurface.getBitmap();
+            final android.graphics.Bitmap image = mVideoSurface.getBitmap();
             //Bitmap bm = Bitmap.createScaledBitmap(image,100, 100, true);
-            Bitmap bm = image.copy(image.getConfig(), true);
+            android.graphics.Bitmap bm = image.copy(image.getConfig(), true);
 
             if (bm == null)
                 return;
             Mat rgba = new Mat();
             Mat gray = new Mat();
-            Mat edge = new Mat();
-            Mat edgeCanny = new Mat();
-            Mat edgeSobel = new Mat();
-            Mat edgeX = new Mat();
-            Mat edgeY = new Mat();
+            Mat resizedImg = Mat.zeros(new Size(160, 120), rgba.type());
 
             Utils.bitmapToMat(bm, rgba);
 
-            Imgproc.cvtColor(rgba, gray, Imgproc.COLOR_RGBA2GRAY);
+            Imgproc.resize(rgba, resizedImg, new Size(160, 120));
+            Toast.makeText(this.getApplicationContext(), String.format("%d - %d", resizedImg.width(), resizedImg.height()), Toast.LENGTH_SHORT).show();
+            Imgproc.cvtColor(resizedImg, gray, Imgproc.COLOR_RGBA2GRAY);
+            Imgproc.GaussianBlur(gray, gray, new Size(3, 3), 0);
+
 
             try {
                 // load cascade file from application resources
-                InputStream is = getResources().openRawResource(R.raw.cascade_good);
+                InputStream is = getResources().openRawResource(R.raw.haarcascade_fullbody);
                 File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-                mCascadeFile = new File(cascadeDir, "cascade_good.xml");
+                mCascadeFile = new File(cascadeDir, "haarcascade_fullbody.xml");
 
                 FileOutputStream os = new FileOutputStream(mCascadeFile);
 
@@ -1197,42 +1399,29 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
                 e.printStackTrace();
             }
 
-            MatOfRect objects = new MatOfRect();
-
             if (mJavaDetector != null) {
-                mJavaDetector.detectMultiScale(gray, objects, 1.1, 2, Objdetect.CASCADE_SCALE_IMAGE, new Size(40, 80), new Size());
+                MatOfRect objects = new MatOfRect();
+                mJavaDetector.detectMultiScale(gray, objects, 1.1, 2, Objdetect.CASCADE_SCALE_IMAGE, new Size(14, 28), new Size());
+                // Each rectangle in the faces array is a face
+                // Draw a rectangle around each face
+                Rect[] objArray = objects.toArray();
+                for (int i = 0; i < objArray.length; i++)
+                    Core.rectangle(resizedImg, objArray[i].tl(), objArray[i].br(), new Scalar(0, 255, 0, 255), 3);
+
             }
 
-            // Each rectangle in the faces array is a face
-            // Draw a rectangle around each face
-            Rect[] objArray = objects.toArray();
-            for (int i = 0; i < objArray.length; i++)
-                Core.rectangle(rgba, objArray[i].tl(), objArray[i].br(), new Scalar(0, 255, 0, 255), 3);
+            Imgproc.resize(resizedImg, rgba, rgba.size());
             Utils.matToBitmap(rgba, bm);
 
             Canvas imCanvas = new Canvas(bm);
             imCanvas.drawBitmap(bm, 0, 0, null);
             opencvView.setImageDrawable(new BitmapDrawable(getResources(), bm));
 
-//        Toast.makeText(MainActivity.this,String.format("%d - %d - %d - %d",image.getPixel(100,100)&0x000000FF,bmap.getPixel(100,100)&0x000000FF,image.getHeight(),image.getWidth()),Toast.LENGTH_SHORT).show();
 
+            //Toast.makeText(MainActivity.this,String.format("%d - %d - %d - %d",image.getPixel(100,100)&0x000000FF,bmap.getPixel(100,100)&0x000000FF,image.getHeight(),image.getWidth()),Toast.LENGTH_SHORT).show();
 
-//       File file = new File( Environment.getExternalStorageDirectory() + "/SampleImage.jpg");
-//       try
-//        {
-//            file.createNewFile();
-//            FileOutputStream fileoutputstream = new FileOutputStream(file);
-//            //fileoutputstream.write(bytearrayoutputstream.toByteArray());
-//            bm.compress(Bitmap.CompressFormat.JPEG, 90, fileoutputstream);
-//            fileoutputstream.flush();
-//            fileoutputstream.close();
-//        }
-//        catch (Exception e)
-//        {
-//            e.printStackTrace();
-//        }
-//        //Toast.makeText(MainActivity.this, "Image Saved Successfully", Toast.LENGTH_LONG).show();
         }
+        // opencv_detection();
 
     }
 
@@ -1245,88 +1434,166 @@ public class MainActivity extends FragmentActivity implements AdapterView.OnItem
     }
 
 
+    public void init_waypoints_settings() {
+        LinearLayout wayPointSettings = (LinearLayout) getLayoutInflater().inflate(R.layout.labyrinth_settings, null);
+        final double[] lon = new double[2];
+        final double[] lan = new double[2];
 
-    private void switchCameraMode(DJICameraSettingsDef.CameraMode cameraMode){
+        final EditText a = (EditText) wayPointSettings.findViewById(R.id.ang);
+        final EditText h = (EditText) wayPointSettings.findViewById(R.id.h);
+        final TextView d = (EditText) wayPointSettings.findViewById(R.id.distance);
 
-        DJICamera camera = FPVDemoApplication.getCameraInstance();
-        if (camera != null) {
-            camera.setCameraMode(cameraMode, new DJIBaseComponent.DJICompletionCallback() {
-                @Override
-                public void onResult(DJIError error) {
 
-                    if (error == null) {
-                        showToast("Switch Camera Mode Succeeded");
-                    } else {
-                        showToast(error.getDescription());
+        a.addTextChangedListener(new TextWatcher() {
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                d.clearComposingText();
+                //Your query to fetch Data
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                d.clearComposingText();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (s.length() > 0) {
+
+                    a1 = true;
+                    if (h1) {
+
+                        long r = Math.abs(Math.round(2.0 * Integer.parseInt(h.getText().toString()) * Math.tan(Integer.parseInt(a.getText().toString()) / 2.0)));
+                        d.setText(String.valueOf(r));
+
+
                     }
+
+
+                } else {
+                    d.clearComposingText();
+                    d.setText(" ");
+                    a1 = false;
                 }
-            });
+
+            }
+        });
+        h.addTextChangedListener(new TextWatcher() {
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                d.clearComposingText();
+                //Your query to fetch Data
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                d.clearComposingText();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (s.length() > 0) {
+                    h1 = true;
+
+
+                    if (a1) {
+                        long r = Math.abs(Math.round(2.0 * Integer.parseInt(h.getText().toString()) * Math.tan(Integer.parseInt(a.getText().toString()) / 2.0)));
+
+
+                        d.setText(String.valueOf(r));
+                    }
+
+
+                } else {
+                    h1 = false;
+                    d.clearComposingText();
+                    d.setText(" ");
+                    //
+                }
+                //Your query to fetch Data
+
+            }
+        });
+
+
+        if (corner[0].lon < corner[1].lon) {
+            lon[0] = corner[0].lon;
+
+            lan[0] = corner[0].lat;
+            lon[1] = corner[1].lon;
+            lan[1] = corner[1].lat;
+        } else {
+            lon[1] = corner[0].lon;
+
+            lan[1] = corner[0].lat;
+            lon[0] = corner[1].lon;
+            lan[0] = corner[1].lat;
         }
 
-    }
 
-    // Method for taking photo
-    private void captureAction(){
+        new AlertDialog.Builder(this)
+                .setTitle("")
+                .setView(wayPointSettings)
+                .setPositiveButton("Finish", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
 
-        DJICameraSettingsDef.CameraMode cameraMode = DJICameraSettingsDef.CameraMode.ShootPhoto;
 
-        final DJICamera camera = FPVDemoApplication.getCameraInstance();
-        if (camera != null) {
+                        mid = 0;
 
-            DJICameraSettingsDef.CameraShootPhotoMode photoMode = DJICameraSettingsDef.CameraShootPhotoMode.Single; // Set the camera capture mode as Single mode
-            camera.startShootPhoto(photoMode, new DJIBaseComponent.DJICompletionCallback() {
+                        dr = 0;
+                        if (!(a.getText().toString().isEmpty() && a.getText().toString().isEmpty())) {
+                            if (flag)
+                                drone_move = Coordinates.create_grid(lon, lan, Integer.parseInt(a.getText().toString()), Integer.parseInt(h.getText().toString()));
+                            else
+                                drone_move = Coordinates.create_square(lon, lan, Integer.parseInt(a.getText().toString()), Integer.parseInt(h.getText().toString()));
+                            if (drone_move != null) {
 
-                @Override
-                public void onResult(DJIError error) {
-                    if (error == null) {
-                        showToast("take photo: success");
-                    } else {
-                        showToast(error.getDescription());
+                                add_waypoints.setEnabled(false);
+                                addMarks();
+                            } else {
+                                //Toast.makeText(c,"Increase points distance ",Toast.LENGTH_SHORT).show();
+                                setResultToToast("Increase points distance ");
+
+                            }
+                        }
+
                     }
-                }
 
-            }); // Execute the startShootPhoto API
-        }
+                })
+                .create()
+                .show();
     }
 
-    // Method for starting recording
-    private void startRecord(){
+    public void window_change_altitute() {
 
-        DJICameraSettingsDef.CameraMode cameraMode = DJICameraSettingsDef.CameraMode.RecordVideo;
-        final DJICamera camera = FPVDemoApplication.getCameraInstance();
-        if (camera != null) {
-            camera.startRecordVideo(new DJIBaseComponent.DJICompletionCallback(){
-                @Override
-                public void onResult(DJIError error)
-                {
-                    if (error == null) {
-                        showToast("Record video: success");
-                    }else {
-                        showToast(error.getDescription());
+        final LinearLayout chooseAction = (LinearLayout) getLayoutInflater().inflate(R.layout.change_point_altitute, null);
+
+
+        new AlertDialog.Builder(this)
+                .setTitle("")
+                .setView(chooseAction)
+                .setPositiveButton("Finish", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+
+
+                        EditText e = (EditText) (chooseAction.findViewById(R.id.alti_change));
+
+                        newalti = Integer.parseInt((e.getText().toString()));
+
                     }
-                }
-            }); // Execute the startRecordVideo API
-        }
-    }
 
-    // Method for stopping recording
-    private void stopRecord(){
-
-        DJICamera camera = FPVDemoApplication.getCameraInstance();
-        if (camera != null) {
-            camera.stopRecordVideo(new DJIBaseComponent.DJICompletionCallback(){
-
-                @Override
-                public void onResult(DJIError error)
-                {
-                    if(error == null) {
-                        showToast("Stop recording: success");
-                    }else {
-                        showToast(error.getDescription());
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
                     }
-                }
-            }); // Execute the stopRecordVideo API
-        }
 
+                })
+                .create()
+                .show();
     }
+
+
 }

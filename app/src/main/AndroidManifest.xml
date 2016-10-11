@@ -48,14 +48,7 @@
         <meta-data
             android:name="com.dji.sdk.API_KEY"
             android:value="3e9d99b8bf3bbe2d8ac85b9b" />
-        //TODO: Enter your app key here
-        <meta-data
-            android:name="com.google.android.maps.v2.API_KEY"
-            android:value=" AIzaSyCuOeuk5fv2CgnTfltKEWe7vSClHgURGwM " />
-        //TODO: Enter your Google API Key here
-        <meta-data
-            android:name="com.google.android.gms.version"
-            android:value="@integer/google_play_services_version" />
+
 
         <activity
             android:name="dji.sdk.SDKManager.DJIAoaControllerActivity"
@@ -83,7 +76,11 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity><!-- ATTENTION: This was auto-generated to add Google Play services to your project for
+     App Indexing.  See https://g.co/AppIndexing/AndroidStudio for more information. -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
 
     </application>
 

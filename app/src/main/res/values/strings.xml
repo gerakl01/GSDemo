@@ -8,8 +8,19 @@
 
     <string-array name="Camera_mode">
         <item>Orginal mode</item>
-        <item>Find cars</item>
+        <item>Find top-view cars</item>
+        <item>Find People</item>
+        <item>Find Side cars</item>
 
     </string-array>
+
+    <string-array name="Image_Resolution">
+        <item>160x120</item>
+        <item>320x240</item>
+        <item>640x480</item>
+        <item>1024x600</item>
+
+    </string-array>
+
 
 </resources>
