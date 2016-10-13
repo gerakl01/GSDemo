@@ -249,6 +249,21 @@
                  android:layout_weight="0.5"
                  android:spinnerMode="dropdown" />
 
+
+
+             <Spinner
+                 android:id="@+id/image_resol"
+                 android:layout_width="match_parent"
+                 android:layout_height="wrap_content"
+                 android:layout_weight="0.5"
+                 android:spinnerMode="dropdown"
+                 android:layout_alignParentTop="true"
+                 android:layout_alignParentEnd="true"
+                 android:layout_toEndOf="@+id/main_title_rl"
+                 android:layout_above="@+id/video_previewer_surface" />
+
+
+
              <TextView
                  android:id="@+id/ConnectStatusTextViewCamera"
                  android:layout_width="wrap_content"

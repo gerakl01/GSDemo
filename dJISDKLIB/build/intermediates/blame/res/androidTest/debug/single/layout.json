@@ -1,11 +1,19 @@
 [
     {
+        "merged": "/home/george/Documents/android projects/GSDemo/D:\\home\\george\\Desktop\\AndroidGitProjects\\GSDemo\\D:\\Android Development\\GSDemo\\dJISDKLIB\\build\\intermediates\\res\\merged\\androidTest\\debug\\layout\\log_dialog_view.xml",
+        "source": "/home/george/Documents/android projects/GSDemo/D:\\home\\george\\Desktop\\AndroidGitProjects\\GSDemo\\D:\\Android Development\\GSDemo\\dJISDKLIB\\build\\intermediates\\bundles\\debug\\res\\layout\\log_dialog_view.xml"
+    },
+    {
+        "merged": "/home/george/Documents/GSDemo/dJISDKLIB/build/intermediates/res/merged/androidTest/debug/layout/log_dialog_view.xml",
+        "source": "/home/george/Documents/GSDemo/dJISDKLIB/build/intermediates/bundles/debug/res/layout/log_dialog_view.xml"
+    },
+    {
         "merged": "/home/george/Documents/android projects/GSDemo/D:\\home\\george\\Desktop\\AndroidGitProjects\\GSDemo\\dJISDKLIB\\build\\intermediates\\res\\merged\\androidTest\\debug\\layout\\log_dialog_view.xml",
         "source": "/home/george/Documents/android projects/GSDemo/D:\\home\\george\\Desktop\\AndroidGitProjects\\GSDemo\\dJISDKLIB\\build\\intermediates\\bundles\\debug\\res\\layout\\log_dialog_view.xml"
     },
     {
-        "merged": "/home/george/Documents/android projects/GSDemo/D:\\home\\george\\Desktop\\AndroidGitProjects\\GSDemo\\D:\\Android Development\\GSDemo\\dJISDKLIB\\build\\intermediates\\res\\merged\\androidTest\\debug\\layout\\log_dialog_view.xml",
-        "source": "/home/george/Documents/android projects/GSDemo/D:\\home\\george\\Desktop\\AndroidGitProjects\\GSDemo\\D:\\Android Development\\GSDemo\\dJISDKLIB\\build\\intermediates\\bundles\\debug\\res\\layout\\log_dialog_view.xml"
+        "merged": "/home/george/Documents/android projects/GSDemo/D:\\Android Development\\GSDemo\\dJISDKLIB\\build\\intermediates\\res\\merged\\androidTest\\debug\\layout\\log_dialog_view.xml",
+        "source": "/home/george/Documents/android projects/GSDemo/D:\\Android Development\\GSDemo\\dJISDKLIB\\build\\intermediates\\bundles\\debug\\res\\layout\\log_dialog_view.xml"
     },
     {
         "merged": "/home/george/Documents/android projects/GSDemo/D:\\home\\george\\Desktop\\AndroidGitProjects\\GSDemo\\C:\\Users\\George\\AndroidStudioProjects\\GSDemo\\dJISDKLIB\\build\\intermediates\\res\\merged\\androidTest\\debug\\layout\\log_dialog_view.xml",
@@ -18,9 +26,5 @@
     {
         "merged": "/home/george/Documents/android projects/GSDemo/dJISDKLIB/build/intermediates/res/merged/androidTest/debug/layout/log_dialog_view.xml",
         "source": "/home/george/Documents/android projects/GSDemo/dJISDKLIB/build/intermediates/bundles/debug/res/layout/log_dialog_view.xml"
-    },
-    {
-        "merged": "/home/george/Documents/android projects/GSDemo/D:\\Android Development\\GSDemo\\dJISDKLIB\\build\\intermediates\\res\\merged\\androidTest\\debug\\layout\\log_dialog_view.xml",
-        "source": "/home/george/Documents/android projects/GSDemo/D:\\Android Development\\GSDemo\\dJISDKLIB\\build\\intermediates\\bundles\\debug\\res\\layout\\log_dialog_view.xml"
     }
 ]

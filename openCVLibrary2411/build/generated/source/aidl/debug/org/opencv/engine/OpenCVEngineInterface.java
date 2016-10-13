@@ -1,6 +1,6 @@
 /*
  * This file is auto-generated.  DO NOT MODIFY.
- * Original file: /home/george/Documents/android projects/GSDemo/openCVLibrary2411/src/main/aidl/org/opencv/engine/OpenCVEngineInterface.aidl
+ * Original file: /home/george/Documents/GSDemo/openCVLibrary2411/src/main/aidl/org/opencv/engine/OpenCVEngineInterface.aidl
  */
 package org.opencv.engine;
 /**

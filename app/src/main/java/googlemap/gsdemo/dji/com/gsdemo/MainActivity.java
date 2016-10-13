@@ -46,6 +46,8 @@ import android.widget.Toast;
 import android.widget.ToggleButton;
 
 
+import com.caverock.androidsvg.IntegerParser;
+
 import org.mapsforge.core.graphics.Bitmap;
 import org.mapsforge.core.model.Point;
 import org.mapsforge.map.android.graphics.AndroidGraphicFactory;
@@ -68,11 +70,18 @@ import org.mapsforge.core.graphics.Style;
 import org.mapsforge.core.model.LatLong;
 
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Scanner;
 
 import dji.sdk.Camera.DJICamera;
 import dji.sdk.Camera.DJICameraSettingsDef;
@@ -105,7 +114,6 @@ import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.objdetect.Objdetect;
-
 
 public class MainActivity extends FragmentActivity implements DJIMissionManager.MissionProgressStatusCallback, DJIBaseComponent.DJICompletionCallback, TextureView.SurfaceTextureListener, View.OnClickListener {
 
@@ -166,9 +174,9 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
     private double droneLocationLat = 35.469352, droneLocationLng = 33.683667, ndroneLocationLat, ndroneLocationLng;
 
     //private final Map<Integer, Marker> mMarkers = new ConcurrentHashMap<Integer, Marker>();
-    private Layer droneMarker = null;
+    private  Layer droneMarker = null;
 
-    protected static float altitude_w[] = new float[30];
+    protected static float altitude_w[];
     protected float altitude = 100.0f;
 
     private float mSpeed = 10.0f;
@@ -183,7 +191,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
     private Mark m;
 
     public static List<Layer> marks;
-    protected static DJIWaypointMission mWaypointMission;
+    protected  DJIWaypointMission mWaypointMission;
     private DJIMissionManager mMissionManager;
     private DJIFlightController mFlightController;
     public static boolean tap;
@@ -278,7 +286,8 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
         stop = (Button) findViewById(R.id.stop);
         add_waypoints.setEnabled(false);
 
-//        photo.setOnClickListener(this);
+
+
         alti_stay.setOnClickListener(this);
         locate.setOnClickListener(this);
         add.setOnClickListener(this);
@@ -458,13 +467,13 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
         });
 
 
-/*        Spinner SpinImageRes = (Spinner) findViewById(R.id.image_resol);
+       Spinner SpinImageRes = (Spinner) findViewById(R.id.image_resol);
         ArrayAdapter<CharSequence> adapterImageRes = ArrayAdapter.createFromResource(this,
                 R.array.Image_Resolution, android.R.layout.simple_spinner_item);
 
-        SpinImageRes.setAdapter(adapter);
+        SpinImageRes.setAdapter(adapterImageRes);
 
-        SpinImageRes.setOnClickListener(this);
+       // SpinImageRes.setOnClickListener(this);
 
         SpinImageRes.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
 
@@ -494,8 +503,12 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
                         imWidth = 600;
                         break;
                 }
+                String item = parentView.getItemAtPosition(position).toString();
+
+                // Showing selected spinner item
+                Toast.makeText(parentView.getContext(), "Selected: " + item, Toast.LENGTH_LONG).show();
             }
-        });*/
+        });
 
         if (null != mVideoSurface) {
             mVideoSurface.setSurfaceTextureListener(this);
@@ -698,6 +711,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
         }
 
         mWaypointMission = new DJIWaypointMission();
+        mWaypointMission.flightPathMode=DJIWaypointMission.DJIWaypointMissionFlightPathMode.Normal;
     }
 
     private void initFlightController() {
@@ -716,8 +730,8 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
                 public void onResult(DJIFlightControllerDataType.DJIFlightControllerCurrentState state) {
 
 
-                    droneLocationLat = state.getAircraftLocation().getLatitude();
-                    droneLocationLng = state.getAircraftLocation().getLongitude();
+                    //droneLocationLat = state.getAircraftLocation().getLatitude();
+                    //droneLocationLng = state.getAircraftLocation().getLongitude();
 
 
                     updateDroneLocation();//}
@@ -855,7 +869,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
                     bitmap.incrementRefCount();
 
 
-                    Mark droneMarker = new Mark(pos, bitmap, 0, -bitmap.getHeight() / 2);
+                   droneMarker = new Mark(pos, bitmap, 0, -bitmap.getHeight() / 2);
 
                     mapView.getLayerManager().getLayers().add(droneMarker);
                     marks.add(droneMarker);
@@ -918,7 +932,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
     public boolean modec = false;
 
 
-    static boolean flag1 = false, a1 = false, h1 = false;
+    boolean flag1 = true, a1 = false, h1 = false;
 
     @Override
     public void onClick(View v) {
@@ -947,6 +961,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
             case R.id.locate: {
 
 
+
                 if (checkGpsCoordination(droneLocationLat, droneLocationLng)) {
                     updateDroneLocation();
                     cameraUpdate();
@@ -971,7 +986,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
                                 type = 1;
                                 enableDisableAdd();
                             } else if (checkedId == R.id.grid) {
-
+                                readfile();
                                 type = 2;
                             } else if (checkedId == R.id.square) {
                                 changeflag();
@@ -1173,25 +1188,30 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
     }
 
     private void configWayPointMission() {
-        DJIWaypoint.DJIWaypointAction mstay = new DJIWaypoint.DJIWaypointAction(DJIWaypointActionType.Stay, 0);
-        DJIWaypoint.DJIWaypointAction tphoto = new DJIWaypoint.DJIWaypointAction(DJIWaypointActionType.StartTakePhoto, 1);
+
         if (mWaypointMission != null) {
             mWaypointMission.finishedAction = mFinishedAction;
             mWaypointMission.headingMode = mHeadingMode;
             mWaypointMission.autoFlightSpeed = mSpeed;
 
+            DJIWaypoint.DJIWaypointAction mstay = new DJIWaypoint.DJIWaypointAction(DJIWaypointActionType.Stay, 0);
+            DJIWaypoint.DJIWaypointAction tphoto = new DJIWaypoint.DJIWaypointAction(DJIWaypointActionType.StartTakePhoto, 1);
+
+
+
             if (mWaypointMission.waypointsList.size() > 0) {
                 for (int i = 0; i < mWaypointMission.waypointsList.size(); i++) {
 
+                    //if (i<altitude_w.length)
                     if (altitude_w[i] > 0) {
-
+setResultToToast("Change altitute");
                         mWaypointMission.getWaypointAtIndex(i).altitude = altitude_w[i];
                     } else
                         mWaypointMission.getWaypointAtIndex(i).altitude = altitude;
                     //mWaypointMission.getWaypointAtIndex(i).altitude = altitude_w[i];
                     mWaypointMission.getWaypointAtIndex(i).addAction(mstay);
                     if (photocheck) {
-
+                        setResultToToast("Photo take");
                         mWaypointMission.getWaypointAtIndex(i).addAction(tphoto);
                         photocheck = false;
 
@@ -1359,49 +1379,49 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
                 return;
             Mat rgba = new Mat();
             Mat gray = new Mat();
-            Mat resizedImg = Mat.zeros(new Size(160, 120), rgba.type());
+            Mat resizedImg = Mat.zeros(new Size(imWidth, imHeight), rgba.type());
 
             Utils.bitmapToMat(bm, rgba);
 
-            Imgproc.resize(rgba, resizedImg, new Size(160, 120));
-            Toast.makeText(this.getApplicationContext(), String.format("%d - %d", resizedImg.width(), resizedImg.height()), Toast.LENGTH_SHORT).show();
+            Imgproc.resize(rgba, resizedImg, new Size(imWidth, imHeight));
+            //Toast.makeText(this.getApplicationContext(), String.format("%d - %d", resizedImg.width(), resizedImg.height()), Toast.LENGTH_SHORT).show();
             Imgproc.cvtColor(resizedImg, gray, Imgproc.COLOR_RGBA2GRAY);
             Imgproc.GaussianBlur(gray, gray, new Size(3, 3), 0);
 
-
-            try {
-                // load cascade file from application resources
-                InputStream is = getResources().openRawResource(R.raw.haarcascade_fullbody);
-                File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-                mCascadeFile = new File(cascadeDir, "haarcascade_fullbody.xml");
-
-                FileOutputStream os = new FileOutputStream(mCascadeFile);
-
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = is.read(buffer)) != -1) {
-                    os.write(buffer, 0, bytesRead);
-                }
-                is.close();
-                os.close();
-
-                mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
-
-                if (mJavaDetector.empty()) {
-                    Log.e(TAG, "Failed to load cascade classifier");
-                    mJavaDetector = null;
-                } else
-                    Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
-
-                cascadeDir.delete();
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+//
+//            try {
+//                // load cascade file from application resources
+//                InputStream is = getResources().openRawResource(R.raw.haarcascade_fullbody);
+//                File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+//                mCascadeFile = new File(cascadeDir, "haarcascade_fullbody.xml");
+//
+//                FileOutputStream os = new FileOutputStream(mCascadeFile);
+//
+//                byte[] buffer = new byte[4096];
+//                int bytesRead;
+//                while ((bytesRead = is.read(buffer)) != -1) {
+//                    os.write(buffer, 0, bytesRead);
+//                }
+//                is.close();
+//                os.close();
+//
+//                mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+//
+//                if (mJavaDetector.empty()) {
+//                    Log.e(TAG, "Failed to load cascade classifier");
+//                    mJavaDetector = null;
+//                } else
+//                    Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
+//
+//                cascadeDir.delete();
+//
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
 
             if (mJavaDetector != null) {
                 MatOfRect objects = new MatOfRect();
-                mJavaDetector.detectMultiScale(gray, objects, 1.1, 2, Objdetect.CASCADE_SCALE_IMAGE, new Size(14, 28), new Size());
+                mJavaDetector.detectMultiScale(gray, objects, 1.1, 2, Objdetect.CASCADE_SCALE_IMAGE, new Size(minWidth, minHeight), new Size());
                 // Each rectangle in the faces array is a face
                 // Draw a rectangle around each face
                 Rect[] objArray = objects.toArray();
@@ -1442,19 +1462,20 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
         final EditText a = (EditText) wayPointSettings.findViewById(R.id.ang);
         final EditText h = (EditText) wayPointSettings.findViewById(R.id.h);
         final TextView d = (EditText) wayPointSettings.findViewById(R.id.distance);
-
+a1=false;
+        h1=false;
 
         a.addTextChangedListener(new TextWatcher() {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                d.clearComposingText();
+                //d.clearComposingText();
                 //Your query to fetch Data
             }
 
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                d.clearComposingText();
+               // d.clearComposingText();
             }
 
             @Override
@@ -1464,7 +1485,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
                     a1 = true;
                     if (h1) {
 
-                        long r = Math.abs(Math.round(2.0 * Integer.parseInt(h.getText().toString()) * Math.tan(Integer.parseInt(a.getText().toString()) / 2.0)));
+                       long r = Math.abs(Math.round(2.0 * Integer.parseInt(h.getText().toString()) * Math.tan(Integer.parseInt(a.getText().toString()) / 2.0)));
                         d.setText(String.valueOf(r));
 
 
@@ -1473,7 +1494,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
 
                 } else {
                     d.clearComposingText();
-                    d.setText(" ");
+                   // d.setText(" ");
                     a1 = false;
                 }
 
@@ -1483,13 +1504,13 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                d.clearComposingText();
+               // d.clearComposingText();
                 //Your query to fetch Data
             }
 
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                d.clearComposingText();
+               // d.clearComposingText();
             }
 
             @Override
@@ -1509,7 +1530,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
                 } else {
                     h1 = false;
                     d.clearComposingText();
-                    d.setText(" ");
+                   // d.setText(" ");
                     //
                 }
                 //Your query to fetch Data
@@ -1549,7 +1570,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
                             else
                                 drone_move = Coordinates.create_square(lon, lan, Integer.parseInt(a.getText().toString()), Integer.parseInt(h.getText().toString()));
                             if (drone_move != null) {
-
+                                altitude_w = new float[drone_move.length];
                                 add_waypoints.setEnabled(false);
                                 addMarks();
                             } else {
@@ -1594,6 +1615,53 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
                 .create()
                 .show();
     }
+
+public void readfile() {
+
+
+    String line = null;
+
+    try {
+
+        File f=new File(Environment.getExternalStorageDirectory(),"passaloi");
+       // FileInputStream fileInputStream = new FileInputStream (f);
+
+        Scanner scan = new Scanner(f);
+
+
+        //InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
+      //  BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+
+      scan.nextLine();
+        Drawable drawable = getResources().getDrawable(R.drawable.red_mark);
+        Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
+        bitmap.incrementRefCount();
+        Log.d("File",scan.nextLine());
+        while ( (scan.hasNext()) )
+        {
+           scan.next();
+            scan.nextInt();
+           double lat=scan.nextDouble();
+            double lon=scan.nextDouble();
+Log.d("File",lat+" "+lon);
+
+
+            Mark k = new Mark(new LatLong(lon,lat), bitmap, 0, -bitmap.getHeight() / 2);
+            mapView.getLayerManager().getLayers().add(k);
+
+        }
+        //fileInputStream.close();
+
+
+
+    }
+    catch(FileNotFoundException ex) {
+        Log.d(TAG, ex.getMessage());
+    }
+    catch(IOException ex) {
+        Log.d(TAG, ex.getMessage());
+    }
+}
 
 
 }
