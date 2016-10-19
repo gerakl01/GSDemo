@@ -3,6 +3,9 @@ package googlemap.gsdemo.dji.com.gsdemo;
 import android.util.Log;
 import android.widget.Toast;
 import android.content.Context;
+
+import org.mapsforge.core.model.LatLong;
+
 import java.text.DecimalFormat;
 
 import googlemap.gsdemo.dji.com.gsdemo.MainActivity;
@@ -19,11 +22,22 @@ public class Coordinates {
     protected static final String TAG = "GSDemoActivity";
 
     double lat;
+
+    LatLong l;
+    double distance;
     double lon;
+    float altitute;
     Coordinates(double lat,double lon){
 
         this.lat=lat;
         this.lon=lon;
+
+
+    }
+    Coordinates(LatLong l,double distance,float h){
+this.l=l;
+        this.distance=distance;
+        this.altitute=h;
 
 
     }
@@ -338,7 +352,7 @@ return s;
 
 
 
-    public static Coordinates[] create_grid(double lat[], double lon[], int al, int f) {
+    public static Coordinates[] create_grid(double lat[], double lon[], int f, int al) {
         Coordinates c=new Coordinates(0,0);
 
 MainActivity ma=new MainActivity();
@@ -346,7 +360,7 @@ MainActivity ma=new MainActivity();
         Log.e(TAG, "distance " +Coordinates. distFrom(lat[1], lon[1], lat[0], lon[0]));
 
 
-        long r = Math.abs(Math.round(2.0 * al * Math.tan(f / 2.0)));
+        long r = Math.abs(Math.round(2.0 * al * Math.tan(Math.toRadians(f / 2.0))));
         Log.e(TAG, "r " + r);
         //ma.setResultToToast("r " + r);
 

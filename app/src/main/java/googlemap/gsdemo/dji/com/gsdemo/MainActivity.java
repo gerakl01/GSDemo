@@ -1,4 +1,8 @@
 package googlemap.gsdemo.dji.com.gsdemo;
+import android.support.v4.view.MenuItemCompat;
+import android.support.v7.app.AppCompatActivity;
+import android.widget.PopupMenu;
+
 
 import android.Manifest;
 import android.app.AlertDialog;
@@ -24,6 +28,8 @@ import android.text.style.ClickableSpan;
 import android.util.Log;
 import android.view.GestureDetector;
 
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 
 import android.view.TextureView;
@@ -44,6 +50,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import android.widget.ToggleButton;
+
 
 
 import com.caverock.androidsvg.IntegerParser;
@@ -78,11 +85,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
 
+import dji.midware.media.a;
 import dji.sdk.Camera.DJICamera;
 import dji.sdk.Camera.DJICameraSettingsDef;
 import dji.sdk.Codec.DJICodecManager;
@@ -98,6 +109,7 @@ import dji.sdk.Products.DJIAircraft;
 import dji.sdk.base.DJIBaseComponent;
 import dji.sdk.base.DJIBaseProduct;
 import dji.sdk.base.DJIError;
+import dji.sdk.base.DJIFlightControllerError;
 
 
 import org.mapsforge.map.util.MapViewProjection;
@@ -115,7 +127,7 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.objdetect.Objdetect;
 
-public class MainActivity extends FragmentActivity implements DJIMissionManager.MissionProgressStatusCallback, DJIBaseComponent.DJICompletionCallback, TextureView.SurfaceTextureListener, View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuItemClickListener, DJIMissionManager.MissionProgressStatusCallback, DJIBaseComponent.DJICompletionCallback, TextureView.SurfaceTextureListener, View.OnClickListener {
 
 
 
@@ -148,7 +160,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
 
     // Codec for video live view
     protected DJICodecManager mCodecManager = null;
-    protected TextView mConnectStatusTextView;
+    protected static TextView mConnectStatusTextView,altitute,speed,speedy;
 
     protected TextureView mVideoSurface = null;
     private Button mCaptureBtn, mShootPhotoModeBtn, mRecordVideoModeBtn;
@@ -171,7 +183,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
     private static final String MAP_FILE = "cyprus.map";
     public static MapView mapView;
 
-    private double droneLocationLat = 35.469352, droneLocationLng = 33.683667, ndroneLocationLat, ndroneLocationLng;
+    private double droneLocationLat = 35.469352, droneLocationLng = 33.0, ndroneLocationLat, ndroneLocationLng;
 
     //private final Map<Integer, Marker> mMarkers = new ConcurrentHashMap<Integer, Marker>();
     private  Layer droneMarker = null;
@@ -181,7 +193,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
 
     private float mSpeed = 10.0f;
 
-    public static int i = 0, corner_points = 0, type;
+    public static int dm=0, corner_points = 0, type;
     protected static int newalti;
     public Coordinates points[];
 
@@ -191,7 +203,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
     private Mark m;
 
     public static List<Layer> marks;
-    protected  DJIWaypointMission mWaypointMission;
+    protected static DJIWaypointMission mWaypointMission;
     private DJIMissionManager mMissionManager;
     private DJIFlightController mFlightController;
     public static boolean tap;
@@ -213,6 +225,9 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
         initMissionManager();
         initPreviewer();
         updateTitleBar();
+
+
+
         if (mVideoSurface == null) {
             Log.e(TAG, "mVideoSurface is null");
         }
@@ -270,9 +285,68 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
         else
             photocheck = true;
     }
-
-
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.camera_menu, menu);
+        return true;
+    }
+    @Override
+    public boolean onMenuItemClick(MenuItem menuItem) {
+        return false;
+    }
     private void initUI() {
+
+/*
+
+       final Button showMenu = (Button) findViewById(R.id.show_dropdown_menu);
+
+
+
+        showMenu.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                PopupMenu dropDownMenu = new PopupMenu(getApplicationContext(), showMenu);
+                dropDownMenu.getMenuInflater().inflate(R.menu.camera_menu, dropDownMenu.getMenu());
+                showMenu.setText("DropDown Menu");
+
+                MenuItem item = dropDownMenu.getMenu().findItem(R.id.spinner);
+                Spinner spinner = (Spinner) MenuItemCompat.getActionView(item);
+
+                ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(getApplicationContext(),
+                        R.array.Image_Resolution, android.R.layout.simple_spinner_item);
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+                spinner.setAdapter(adapter);
+
+
+
+                dropDownMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+
+                    @Override
+                    public boolean onMenuItemClick(MenuItem menuItem) {
+
+                        switch(menuItem.getItemId()){
+
+                         // case  R.id.file:
+                            //setResultToToast("0");
+                           // break;
+
+
+                        }
+
+
+                      //  Toast.makeText(getApplicationContext(), "You have clicked " + menuItem.getTitle(), Toast.LENGTH_LONG).show();
+                        return true;
+                    }
+                });
+                dropDownMenu.show();
+            }
+
+
+
+        });
+
+*/
 
         photo = (CheckBox) findViewById(R.id.photo1);
         alti_stay = (Button) findViewById(R.id.alt_stay);
@@ -301,6 +375,17 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
         mConnectStatusTextView = (TextView) findViewById(R.id.ConnectStatusTextViewCamera);
         // init mVideoSurface
         mVideoSurface = (TextureView) findViewById(R.id.video_previewer_surface);
+
+       altitute=(TextView)findViewById(R.id.altitude);
+
+
+       speed=(TextView)findViewById(R.id.speed);
+
+         //speedx=(TextView)findViewById(R.id.speedx);
+
+        speedy=(TextView)findViewById(R.id.speedy);
+
+
 
         opencvView = (ImageView) findViewById(R.id.ImageFeed);
 
@@ -714,6 +799,7 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
         mWaypointMission.flightPathMode=DJIWaypointMission.DJIWaypointMissionFlightPathMode.Normal;
     }
 
+
     private void initFlightController() {
         DJIBaseProduct product = DJIDemoApplication.getProductInstance();
         if (product != null && product.isConnected()) {
@@ -723,18 +809,51 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
         }
 
 
+
         if (mFlightController != null) {
             locate.setEnabled(true);
             mFlightController.setUpdateSystemStateCallback(new DJIFlightControllerDelegate.FlightControllerUpdateSystemStateCallback() {
                 @Override
                 public void onResult(DJIFlightControllerDataType.DJIFlightControllerCurrentState state) {
 
+if (photocheck&& dm<drone_move.length)
+                    if (new LatLong(droneLocationLat,droneLocationLng).equals(new LatLong(drone_move[dm].lat,drone_move[dm].lon))){
+                        new CameraDrone(MainActivity.this).captureAction();
+                        dm++;
+                    }
 
-                    //droneLocationLat = state.getAircraftLocation().getLatitude();
-                    //droneLocationLng = state.getAircraftLocation().getLongitude();
+
+                    final TextView speedx = (TextView) findViewById(R.id.speedx);
 
 
-                    updateDroneLocation();//}
+
+                    final float uy=state.getVelocityY();
+                    final double u=Math.sqrt(Math.pow(state.getVelocityX(),2)+Math.pow(state.getVelocityY(),2));
+                    final double ux=state.getVelocityX();
+                    final double alt=state.getUltrasonicHeight();
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            altitute.setText("height: "+alt+" m");
+                            speed.setText("u: "+u+"m/s");
+                            speedx.setText("Ux: "+ux+" m/s");
+                            speedy.setText("Uy: "+Float.toString(uy)+" m/s");
+                        }
+                    });
+
+
+
+
+
+                    droneLocationLat = state.getAircraftLocation().getLatitude();
+                    droneLocationLng = state.getAircraftLocation().getLongitude();
+
+
+                    updateDroneLocation();//
+
+                    // }
 
 
 
@@ -848,15 +967,16 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
 
 
     // Update the drone location based on states from MCU.
-    private void updateDroneLocation() {
-
-
+   public void updateDroneLocation() {
+      //
         //this.mapView.setZoomLevel((byte) 12);
 
 
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+
+                speed.setText("m/s");
                 if (droneMarker != null) {
                     mapView.getLayerManager().getLayers().remove(droneMarker);
                 }
@@ -986,11 +1106,14 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
                                 type = 1;
                                 enableDisableAdd();
                             } else if (checkedId == R.id.grid) {
-                                readfile();
+
                                 type = 2;
                             } else if (checkedId == R.id.square) {
                                 changeflag();
                                 type = 2;
+                            }
+                            else if (checkedId == R.id.fromefile) {
+                                readfile();
                             }
 
                         }
@@ -1079,9 +1202,12 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
 
     private void enableDisableAdd() {
         if (isAdd == false) {
+
             isAdd = true;
             add.setText("Exit");
         } else {
+            if (!marks.isEmpty())
+                altitude_w=new float[marks.size()];
             isAdd = false;
             add.setText("Add");
         }
@@ -1198,20 +1324,20 @@ public class MainActivity extends FragmentActivity implements DJIMissionManager.
             DJIWaypoint.DJIWaypointAction tphoto = new DJIWaypoint.DJIWaypointAction(DJIWaypointActionType.StartTakePhoto, 1);
 
 
-
+setResultToToast("size waypoints "+mWaypointMission.waypointsList.size());
             if (mWaypointMission.waypointsList.size() > 0) {
                 for (int i = 0; i < mWaypointMission.waypointsList.size(); i++) {
 
                     //if (i<altitude_w.length)
                     if (altitude_w[i] > 0) {
-setResultToToast("Change altitute");
+
                         mWaypointMission.getWaypointAtIndex(i).altitude = altitude_w[i];
                     } else
                         mWaypointMission.getWaypointAtIndex(i).altitude = altitude;
                     //mWaypointMission.getWaypointAtIndex(i).altitude = altitude_w[i];
                     mWaypointMission.getWaypointAtIndex(i).addAction(mstay);
                     if (photocheck) {
-                        setResultToToast("Photo take");
+
                         mWaypointMission.getWaypointAtIndex(i).addAction(tphoto);
                         photocheck = false;
 
@@ -1461,7 +1587,7 @@ setResultToToast("Change altitute");
 
         final EditText a = (EditText) wayPointSettings.findViewById(R.id.ang);
         final EditText h = (EditText) wayPointSettings.findViewById(R.id.h);
-        final TextView d = (EditText) wayPointSettings.findViewById(R.id.distance);
+        final TextView d = (TextView) wayPointSettings.findViewById(R.id.distance);
 a1=false;
         h1=false;
 
@@ -1469,6 +1595,8 @@ a1=false;
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+
                 //d.clearComposingText();
                 //Your query to fetch Data
             }
@@ -1484,8 +1612,14 @@ a1=false;
 
                     a1 = true;
                     if (h1) {
+                        d.clearComposingText();
+                       long al=Integer.parseInt(h.getText().toString().trim());
+                        long f=Integer.parseInt(a.getText().toString().trim());
+                        Log.d("Distance "," "+al+" "+f);
+                        long r = Math.abs(Math.round(2.0 * al * Math.tan(Math.toRadians(f / 2.0))));
 
-                       long r = Math.abs(Math.round(2.0 * Integer.parseInt(h.getText().toString()) * Math.tan(Integer.parseInt(a.getText().toString()) / 2.0)));
+                        Log.d("Distance "," "+r);
+
                         d.setText(String.valueOf(r));
 
 
@@ -1517,12 +1651,14 @@ a1=false;
             public void afterTextChanged(Editable s) {
                 if (s.length() > 0) {
                     h1 = true;
-
+                    d.clearComposingText();
 
                     if (a1) {
-                        long r = Math.abs(Math.round(2.0 * Integer.parseInt(h.getText().toString()) * Math.tan(Integer.parseInt(a.getText().toString()) / 2.0)));
+                        long al=Integer.parseInt(h.getText().toString().trim());
+                        long f=Integer.parseInt(a.getText().toString().trim());
 
-
+                        long r = Math.abs(Math.round(2.0 * al * Math.tan(Math.toRadians(f / 2.0))));
+                        Log.d("Distance "," "+r);
                         d.setText(String.valueOf(r));
                     }
 
@@ -1538,6 +1674,9 @@ a1=false;
             }
         });
 
+        if (h1&&a1){
+
+        }
 
         if (corner[0].lon < corner[1].lon) {
             lon[0] = corner[0].lon;
@@ -1618,8 +1757,11 @@ a1=false;
 
 public void readfile() {
 
-
+List<Coordinates> distance=new LinkedList<Coordinates>();
     String line = null;
+    Drawable drawable = getResources().getDrawable(R.drawable.red_mark);
+    Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
+    bitmap.incrementRefCount();
 
     try {
 
@@ -1633,21 +1775,24 @@ public void readfile() {
       //  BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
 
       scan.nextLine();
-        Drawable drawable = getResources().getDrawable(R.drawable.red_mark);
-        Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
-        bitmap.incrementRefCount();
-        Log.d("File",scan.nextLine());
+
+
         while ( (scan.hasNext()) )
         {
            scan.next();
-            scan.nextInt();
+           float alt= scan.nextInt();
            double lat=scan.nextDouble();
             double lon=scan.nextDouble();
-Log.d("File",lat+" "+lon);
 
 
-            Mark k = new Mark(new LatLong(lon,lat), bitmap, 0, -bitmap.getHeight() / 2);
-            mapView.getLayerManager().getLayers().add(k);
+
+            //Mark k = new Mark(new LatLong(lon,lat), bitmap, 0, -bitmap.getHeight() / 2);
+            if (checkGpsCoordination(droneLocationLat,droneLocationLng))
+
+                distance.add(new Coordinates(new LatLong(lon,lat),Coordinates.distFrom(droneLocationLat,droneLocationLng, lon, lat),alt));
+
+
+
 
         }
         //fileInputStream.close();
@@ -1661,6 +1806,74 @@ Log.d("File",lat+" "+lon);
     catch(IOException ex) {
         Log.d(TAG, ex.getMessage());
     }
+
+    //drawable = getResources().getDrawable(R.drawable.aircraft);
+  // bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
+    //bitmap.incrementRefCount();
+
+
+    Collections.sort(distance, new Comparator<Coordinates>() {
+        @Override
+        public int compare(Coordinates o1, Coordinates o2) {
+            if (o1.distance>o2.distance)
+                return 1;
+            else if (o1.distance<o2.distance)
+                return -1;
+            return 0;
+        }
+    });
+   // mapView.getLayerManager().getLayers().add(k);
+    //distance=bubbleSort(distance);
+
+
+        //Log.d("Distance "," "+distance.get(i).distance);
+    Mark k;
+    if (distance.get(0).distance<2){
+    //Log.d("Location ",distance.get(0).l.+" "+distance.get(0).lon);
+       k = new Mark(distance.get(0).l, bitmap, 0, -bitmap.getHeight() / 2);
+    this.mapView.setCenter(distance.get(0).l);
+
+
+    this.mapView.setZoomLevel((byte) 20);
+        marks.add(k);
+        mapView.getLayerManager().getLayers().add(k);
+        DJIWaypoint mWaypoint = new DJIWaypoint(distance.get(0).l.latitude, distance.get(0).l.longitude, altitude);
+        //Add Waypoints to Waypoint arraylist;
+        if (mWaypointMission != null) {
+
+            mWaypointMission.addWaypoint(mWaypoint);
+        }
+    }
+
+
+float max=distance.get(0).altitute;
+    for (int i=1;i<distance.size();i++){
+
+        if (distance.get(i).altitute>max)
+        altitude=max+3;
+
+        if (Coordinates.distFrom(distance.get(i-1).l.latitude,distance.get(i-1).l.longitude,distance.get(i).l.latitude,distance.get(i).l.longitude)<2){
+             k = new Mark(distance.get(i).l, bitmap, 0, -bitmap.getHeight() / 2);
+            mapView.getLayerManager().getLayers().add(k);
+            marks.add(k);
+            DJIWaypoint mWaypoint = new DJIWaypoint(distance.get(i).l.latitude, distance.get(i).l.longitude, altitude);
+            //Add Waypoints to Waypoint arraylist;
+            if (mWaypointMission != null) {
+
+                mWaypointMission.addWaypoint(mWaypoint);
+            }
+        }
+
+
+
+
+
+    }
+
+
+
+
+
 }
 
 

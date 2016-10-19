@@ -182,13 +182,11 @@
                      android:id="@+id/ImageFeed"
                      android:layout_width="match_parent"
                      android:layout_height="match_parent"
-                     android:layout_above="@+id/linearLayout"
                      android:layout_alignParentRight="true"
 
                      android:layout_centerHorizontal="true"
                      android:layout_gravity="center"
-                     android:background="#FFFFFF00"
-                     android:layout_below="@+id/main_title_rl" />
+                     android:background="#FFFFFF00" />
 
 
              <LinearLayout
@@ -286,21 +284,50 @@
                      android:id="@+id/speed"
                      android:layout_width="wrap_content"
                      android:layout_height="wrap_content"
-                     android:text="speed"
+                     android:text="0"
                      android:textSize="19sp"
 
                      />
+                 <TextView
+                     android:id="@+id/speedx"
+                     android:layout_width="wrap_content"
+                     android:layout_height="wrap_content"
+                     android:text="0"
+                     android:textSize="19sp"
+
+                     />
+                 <TextView
+                     android:id="@+id/speedy"
+                     android:layout_width="wrap_content"
+                     android:layout_height="wrap_content"
+                     android:text="0"
+                     android:textSize="19sp"
+
+                     />
+
 
                  <TextView
                      android:id="@+id/altitude"
                      android:layout_width="wrap_content"
                      android:layout_height="wrap_content"
-                     android:text="altitude"
+                     android:text="0"
                      android:textSize="19sp"
 
                      />
 
+
              </LinearLayout>
+
+           <!--  <Button
+                 android:id="@+id/show_dropdown_menu"
+                 android:layout_width="wrap_content"
+                 android:layout_height="wrap_content"
+                 android:background="#059636"
+                 android:onClick="showDropDownMenu"
+                 android:text="Show DropDown Menu"
+                 android:textColor="#fff"
+                 android:layout_alignParentTop="true"
+                 android:layout_alignParentStart="true" /-->
 
 
          </RelativeLayout>
