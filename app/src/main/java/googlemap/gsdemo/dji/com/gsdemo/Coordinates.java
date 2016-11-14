@@ -1,12 +1,17 @@
 package googlemap.gsdemo.dji.com.gsdemo;
 
+import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.Toast;
 import android.content.Context;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.mapsforge.core.model.LatLong;
 
 import java.text.DecimalFormat;
+import java.util.HashMap;
 
 import googlemap.gsdemo.dji.com.gsdemo.MainActivity;
 
@@ -42,9 +47,12 @@ this.l=l;
 
     }
 
+    private static String url;
+    private static int height[]=new int[2];
+
     @Override
     public String toString() {
-        return lat+" "+lon;
+        return lat+","+lon;
     }
     public static double bearing(double lat1, double long1, double lat2, double long2)
 
@@ -246,7 +254,7 @@ return emid;
 
 
         }
-        Log.e(TAG, "Sum  " +" "+sum);
+       // Log.e(TAG, "Sum  " +" "+sum);
         Coordinates p[]=new Coordinates[points.length-(2*sum)];
 
         int j=0;
@@ -267,7 +275,7 @@ return emid;
 
 
         }
-        Log.e(TAG, "Size decrease  " +" "+p.length);
+        //Log.e(TAG, "Size decrease  " +" "+p.length);
 
         //points=new Coordinates[p.length];
 
@@ -357,7 +365,7 @@ return s;
 
 MainActivity ma=new MainActivity();
        // ma.setResultToToast("distance " +Coordinates. distFrom(lat[1], lon[1], lat[0], lon[0]));
-        Log.e(TAG, "distance " +Coordinates. distFrom(lat[1], lon[1], lat[0], lon[0]));
+       // Log.e(TAG, "distance " +Coordinates. distFrom(lat[1], lon[1], lat[0], lon[0]));
 
 
         long r = Math.abs(Math.round(2.0 * al * Math.tan(Math.toRadians(f / 2.0))));
@@ -366,12 +374,12 @@ MainActivity ma=new MainActivity();
 
 
        int x = (int) ((1000 * Coordinates.distFrom(lat[1], lon[1], lat[1], lon[0])) / r);
-        Log.e(TAG, "distance x " + Coordinates.distFrom(lat[1], lon[1], lat[1], lon[0]));
+       // Log.e(TAG, "distance x " + Coordinates.distFrom(lat[1], lon[1], lat[1], lon[0]));
        int y = (int) ((1000 * Coordinates.distFrom(lat[1], lon[1], lat[0], lon[1])) / r);
-        Log.e(TAG, "distance y " + Coordinates.distFrom(lat[1], lon[1], lat[0], lon[1]));
-        Log.e(TAG, "y " + y);
-        Log.e(TAG,"Corner 1 " + new Coordinates(lon[1], lat[1]).toString());
-        Log.e(TAG,"Corner 1 " + new Coordinates(lon[0], lat[1]).toString());
+       // Log.e(TAG, "distance y " + Coordinates.distFrom(lat[1], lon[1], lat[0], lon[1]));
+      //  Log.e(TAG, "y " + y);
+       // Log.e(TAG,"Corner 1 " + new Coordinates(lon[1], lat[1]).toString());
+       // Log.e(TAG,"Corner 1 " + new Coordinates(lon[0], lat[1]).toString());
 
         Log.e(TAG, "y " + y);
 
@@ -763,5 +771,98 @@ return  drone_move;
        }
        return  drone_pointS;
    }
+
+
+public  void sealevel_altitute(Coordinates[] drone_move){
+
+    for (int i=0;i<drone_move.length-1;i++) {
+        Log.e(TAG, "Coordinates: "+drone_move[i].toString());
+
+    }
+
+for (int i=0;i<drone_move.length-1;i++) {
+    url = "https://open.mapquestapi.com/elevation/v1/profile?key=zVE5HdW0VoT2wJqUY4TbCzxnQzz1XD1T&callback=handleHelloWorldResponse&shapeFormat=raw&latLngCollection=";
+
+    url=url.concat(drone_move[i].lat+","+drone_move[i].lon+drone_move[i+1].lat+","+drone_move[i+1].lon);
+   // Log.e(TAG, "url: "+url);
+    new Sealevel().execute();
+
+   Log.e(TAG, "Height: "+i + (height[0]));
+    Log.e(TAG, "Height: "+i + (height[1]));
+
+}
+
+
+
+}
+
+
+    private class Sealevel extends AsyncTask<Void, Void, Void> {
+
+
+        @Override
+        protected Void doInBackground(Void... arg0) {
+            HttpHandler sh = new HttpHandler();
+
+            // Making a request to url and getting response
+            String jsonStr = sh.makeServiceCall(url);
+
+           // Log.e(TAG, "Response from url: " + jsonStr);
+
+            if (jsonStr != null) {
+                try {
+                    JSONObject jsonObj = new JSONObject(jsonStr.substring(25,jsonStr.length()-1));
+
+                    // Getting JSON Array node
+                    JSONArray elevation = jsonObj.getJSONArray("elevationProfile");
+
+                    // looping through All Contacts
+                    for (int i = 0; i < elevation.length(); i++) {
+                        JSONObject c = elevation.getJSONObject(i);
+
+                     height[i]= c.getInt("height");
+                       // String name = c.getString("distance");
+
+                        //Log.e(TAG, "Height: "+i + (height[i]));
+
+
+
+
+
+                    }
+                } catch (final JSONException e) {
+                    Log.e(TAG, "Json parsing error: " + e.getMessage());
+                   /* runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getApplicationContext(),
+                                    "Json parsing error: " + e.getMessage(),
+                                    Toast.LENGTH_LONG)
+                                    .show();
+                        }
+                    });*/
+
+                }
+            } else {
+                Log.e(TAG, "Couldn't get json from server.");
+               /* runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(getApplicationContext(),
+                                "Couldn't get json from server. Check LogCat for possible errors!",
+                                Toast.LENGTH_LONG)
+                                .show();
+                    }
+                });*/
+
+            }
+
+            return null;
+        }
+
+
+    }
+
+
 
 }

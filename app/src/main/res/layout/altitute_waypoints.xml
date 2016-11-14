@@ -8,6 +8,7 @@
         android:text="Altitude:">
     </TextView>
     <EditText
+        android:inputType="number"
         android:id="@+id/altitude"
         android:layout_width="40dp"
         android:layout_height="wrap_content">

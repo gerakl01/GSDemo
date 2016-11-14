@@ -1,6 +1,16 @@
 package googlemap.gsdemo.dji.com.gsdemo;
+
+
+import android.app.ProgressDialog;
+import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.IBinder;
+import android.support.annotation.UiThread;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.text.format.Time;
+import android.webkit.HttpAuthHandler;
+import android.widget.ListAdapter;
 import android.widget.PopupMenu;
 
 
@@ -34,8 +44,7 @@ import android.view.MotionEvent;
 
 import android.view.TextureView;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
+
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -43,27 +52,19 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RadioGroup;
-
-import android.widget.Spinner;
+import android.graphics.Bitmap;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import android.widget.ToggleButton;
 
-
-
-import com.caverock.androidsvg.IntegerParser;
-
-import org.mapsforge.core.graphics.Bitmap;
-import org.mapsforge.core.model.Point;
 import org.mapsforge.map.android.graphics.AndroidGraphicFactory;
 import org.mapsforge.map.android.util.AndroidUtil;
 import org.mapsforge.map.android.view.MapView;
 import org.mapsforge.map.layer.Layer;
 
 import org.mapsforge.map.layer.cache.TileCache;
-import org.mapsforge.map.layer.overlay.Marker;
 import org.mapsforge.map.layer.overlay.Polyline;
 import org.mapsforge.map.layer.renderer.TileRendererLayer;
 import org.mapsforge.map.datastore.MapDataStore;
@@ -85,15 +86,20 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
 
+
 import dji.midware.media.a;
+import dji.sdk.Battery.DJIBattery;
 import dji.sdk.Camera.DJICamera;
 import dji.sdk.Camera.DJICameraSettingsDef;
 import dji.sdk.Codec.DJICodecManager;
@@ -105,12 +111,14 @@ import dji.sdk.MissionManager.DJIMissionManager;
 import dji.sdk.MissionManager.DJIWaypoint;
 import dji.sdk.MissionManager.DJIWaypoint.DJIWaypointActionType;
 import dji.sdk.MissionManager.DJIWaypointMission;
+import dji.sdk.MissionManager.DJIWaypointMission.DJIWaypointMissionStatus;
 import dji.sdk.Products.DJIAircraft;
 import dji.sdk.base.DJIBaseComponent;
 import dji.sdk.base.DJIBaseProduct;
 import dji.sdk.base.DJIError;
+import dji.sdk.Battery.DJIBattery.DJIBatteryState;
 import dji.sdk.base.DJIFlightControllerError;
-
+import dji.sdk.MissionManager.DJIMission.DJIMissionProgressStatus;
 
 import org.mapsforge.map.util.MapViewProjection;
 import org.opencv.android.BaseLoaderCallback;
@@ -128,8 +136,6 @@ import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.objdetect.Objdetect;
 
 public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuItemClickListener, DJIMissionManager.MissionProgressStatusCallback, DJIBaseComponent.DJICompletionCallback, TextureView.SurfaceTextureListener, View.OnClickListener {
-
-
 
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
@@ -157,15 +163,16 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
 
     // public CameraDrone dc = new CameraDrone(MainActivity.this);
 
-
+    Thread thread;
     // Codec for video live view
     protected DJICodecManager mCodecManager = null;
-    protected static TextView mConnectStatusTextView,altitute,speed,speedy;
+    protected static TextView mConnectStatusTextView, altitute, speed, speedy;
 
-    protected TextureView mVideoSurface = null;
+    protected static TextureView mVideoSurface = null;
     private Button mCaptureBtn, mShootPhotoModeBtn, mRecordVideoModeBtn;
     private ToggleButton mRecordBtn;
     protected TextView recordingTime;
+    ArrayList<HashMap<String, String>> contactList;
 
 
     //Main Activity variables
@@ -177,7 +184,7 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
     private ImageButton locate;
     private Button swit, config, prepare, start, stop;
     private CheckBox photo;
-
+  private  ProgressBar mProgress;
 
     public static boolean isAdd = false, flag = true, photocheck = false, change = false, addpoint = false;
     private static final String MAP_FILE = "cyprus.map";
@@ -186,14 +193,14 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
     private double droneLocationLat = 35.469352, droneLocationLng = 33.0, ndroneLocationLat, ndroneLocationLng;
 
     //private final Map<Integer, Marker> mMarkers = new ConcurrentHashMap<Integer, Marker>();
-    private  Layer droneMarker = null;
+    private Layer droneMarker = null;
 
     protected static float altitude_w[];
     protected float altitude = 100.0f;
 
     private float mSpeed = 10.0f;
 
-    public static int dm=0, corner_points = 0, type;
+    public static int dm = 0, corner_points = 0, type;
     protected static int newalti;
     public Coordinates points[];
 
@@ -202,30 +209,35 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
     public static Coordinates[] drone_move;
     private Mark m;
 
-    public static List<Layer> marks;
+    public static List<Layer> marks, random_marks;
     protected static DJIWaypointMission mWaypointMission;
+
     private DJIMissionManager mMissionManager;
     private DJIFlightController mFlightController;
-    public static boolean tap;
+    DJIBattery.DJIBatteryStateUpdateCallback batterystatus;
 
     private DJIWaypointMission.DJIWaypointMissionFinishedAction mFinishedAction = DJIWaypointMission.DJIWaypointMissionFinishedAction.NoAction;
     private DJIWaypointMission.DJIWaypointMissionHeadingMode mHeadingMode = DJIWaypointMission.DJIWaypointMissionHeadingMode.Auto;
+    private DJIWaypointMission.DJIWaypointMissionStatus mWaypointReached;
+
+    DJIWaypointMission.DJIWaypointMissionExecuteState execute;
+
 
     public File mCascadeFile;
-    CascadeClassifier mJavaDetector;
-    public ImageView opencvView;
+   static  CascadeClassifier mJavaDetector;
+    public static ImageView opencvView;
 
-    public int minWidth, minHeight;
-    public int imWidth = 800, imHeight = 600;
+    public static int minWidth, minHeight;
+    public static int imWidth = 800, imHeight = 600;
 
     @Override
     protected void onResume() {
+
         super.onResume();
         initFlightController();
         initMissionManager();
         initPreviewer();
         updateTitleBar();
-
 
 
         if (mVideoSurface == null) {
@@ -252,6 +264,8 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
 
     @Override
     protected void onDestroy() {
+
+        //stopService(new Intent(getApplicationContext(),BackgroundService.class));
         uninitPreviewer();
 
         super.onDestroy();
@@ -285,39 +299,33 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
         else
             photocheck = true;
     }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.camera_menu, menu);
+        //getMenuInflater().inflate(R.menu.camera_menu, menu);
         return true;
     }
+
+
+    AlertDialog levelDialog;
+
     @Override
     public boolean onMenuItemClick(MenuItem menuItem) {
         return false;
     }
+
     private void initUI() {
 
-/*
 
-       final Button showMenu = (Button) findViewById(R.id.show_dropdown_menu);
-
-
-
+        final Button showMenu = (Button) findViewById(R.id.show_dropdown_menu);
+         mProgress = (ProgressBar) findViewById(R.id.progressbar);
+mProgress.setVisibility(View.INVISIBLE);
         showMenu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 PopupMenu dropDownMenu = new PopupMenu(getApplicationContext(), showMenu);
                 dropDownMenu.getMenuInflater().inflate(R.menu.camera_menu, dropDownMenu.getMenu());
-                showMenu.setText("DropDown Menu");
-
-                MenuItem item = dropDownMenu.getMenu().findItem(R.id.spinner);
-                Spinner spinner = (Spinner) MenuItemCompat.getActionView(item);
-
-                ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(getApplicationContext(),
-                        R.array.Image_Resolution, android.R.layout.simple_spinner_item);
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
-                spinner.setAdapter(adapter);
-
+                showMenu.setText("Camera");
 
 
                 dropDownMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
@@ -325,17 +333,218 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
                     @Override
                     public boolean onMenuItemClick(MenuItem menuItem) {
 
-                        switch(menuItem.getItemId()){
+                        switch (menuItem.getItemId()) {
+                            case R.id.resolution:
+                                setResultToToast("0");
 
-                         // case  R.id.file:
-                            //setResultToToast("0");
-                           // break;
+// Strings to Show In Dialog with Radio Buttons
+                                final CharSequence[] items = {"160x120",
+                                        "320x240",
+                                        "640x480",
+                                        "1024x600"};
+
+                                // Creating and Building the Dialog
+                                final AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+
+                                builder.setTitle("Resolution");
+                                builder.setSingleChoiceItems(items, -1, new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int item) {
+
+
+                                        switch (item) {
+                                            case 0:
+                                                builder.setTitle("160x120");
+                                                imHeight = 120;
+                                                imWidth = 160;
+                                                break;
+                                            case 1:
+                                                imHeight = 240;
+                                                imWidth = 320;
+                                                // Your code when 2nd  option seletced
+                                                builder.setTitle("320x240");
+                                                break;
+                                            case 2:
+                                                imHeight = 480;
+                                                imWidth = 640;
+                                                // Your code when 3rd option seletced
+                                                builder.setTitle("640x480");
+                                                break;
+                                            case 3:
+                                                imHeight = 600;
+                                                imWidth = 1400;
+                                                builder.setTitle("1024x600");
+                                                break;
+
+                                        }
+                                        levelDialog.dismiss();
+                                    }
+                                });
+
+                                levelDialog = builder.create();
+                                levelDialog.show();
+
+                                break;
+
+
+                            case R.id.opencv:
+
+// Strings to Show In Dialog with Radio Buttons
+                                final CharSequence[] items1 = {"Orginal mode",
+                                        "Find top-view cars",
+                                        "Find People",
+                                        "Find Side cars"};
+
+                                // Creating and Building the Dialog
+                                final AlertDialog.Builder builder1 = new AlertDialog.Builder(MainActivity.this);
+
+                                builder1.setTitle("Camera mode");
+                                builder1.setSingleChoiceItems(items1, -1, new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int item) {
+
+
+                                        switch (item) {
+                                            case 0:
+                                               // stopService(new Intent(getBaseContext(), BackgroundService.class));
+
+                                                mVideoSurface.setVisibility(View.VISIBLE);
+                                                opencvView.setVisibility(View.INVISIBLE);
+                                                modec = false;
+                                                // builder1.setTitle( "Orginal mode");
+                                                //builder.wait(2000);
+                                                break;
+                                            case 1:
+                                                minWidth = 40;
+                                                minHeight = 40;
+                                                //mVideoSurface.setVisibility(View.INVISIBLE);
+                                                opencvView.setVisibility(View.VISIBLE);
+                                                modec = true;
+                                                Log.d("modec", modec + " ");
+                                                try {
+                                                    // load cascade file from application resources
+                                                    InputStream is = getResources().openRawResource(R.raw.cascade_good);
+                                                    File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+                                                    mCascadeFile = new File(cascadeDir, "cascade_good.xml");
+
+                                                    FileOutputStream os = new FileOutputStream(mCascadeFile);
+
+                                                    byte[] buffer = new byte[4096];
+                                                    int bytesRead;
+                                                    while ((bytesRead = is.read(buffer)) != -1) {
+                                                        os.write(buffer, 0, bytesRead);
+                                                    }
+                                                    is.close();
+                                                    os.close();
+
+                                                    mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+
+                                                    if (mJavaDetector.empty()) {
+                                                        Log.e(TAG, "Failed to load cascade classifier");
+                                                        mJavaDetector = null;
+                                                    } else
+                                                        Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
+
+                                                    cascadeDir.delete();
+
+                                                } catch (Exception e) {
+                                                    e.printStackTrace();
+                                                }
+                                                //builder1.setTitle( "Find top-view cars");
+                                                break;
+                                            case 2:
+                                                minWidth = 48;
+                                                minHeight = 96;
+                                                opencvView.setVisibility(View.VISIBLE);
+                                                modec = true;
+
+                                                // mVideoSurface.setVisibility(View.INVISIBLE);
+
+                                                try {
+                                                    // load cascade file from application resources
+                                                    InputStream is = getResources().openRawResource(R.raw.hogcascade_pedestrians);
+                                                    File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+                                                    mCascadeFile = new File(cascadeDir, "hogcascade_pedestrians.xml");
+
+                                                    FileOutputStream os = new FileOutputStream(mCascadeFile);
+
+                                                    byte[] buffer = new byte[4096];
+                                                    int bytesRead;
+                                                    while ((bytesRead = is.read(buffer)) != -1) {
+                                                        os.write(buffer, 0, bytesRead);
+                                                    }
+                                                    is.close();
+                                                    os.close();
+
+                                                    mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+
+                                                    if (mJavaDetector.empty()) {
+                                                        Log.e(TAG, "Failed to load cascade classifier");
+                                                        mJavaDetector = null;
+                                                    } else
+                                                        Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
+
+                                                    cascadeDir.delete();
+
+                                                } catch (Exception e) {
+                                                    e.printStackTrace();
+                                                }
+
+                                                // builder1.setTitle("Find People");
+                                                break;
+                                            case 3:
+                                                minWidth = 50;
+                                                minHeight = 20;
+                                                //mVideoSurface.setVisibility(View.INVISIBLE);
+                                                opencvView.setVisibility(View.VISIBLE);
+                                                modec = true;
+
+                                                try {
+                                                    // load cascade file from application resources
+                                                    InputStream is = getResources().openRawResource(R.raw.side_car);
+                                                    File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+                                                    mCascadeFile = new File(cascadeDir, "side_car.xml");
+
+                                                    FileOutputStream os = new FileOutputStream(mCascadeFile);
+
+                                                    byte[] buffer = new byte[4096];
+                                                    int bytesRead;
+                                                    while ((bytesRead = is.read(buffer)) != -1) {
+                                                        os.write(buffer, 0, bytesRead);
+                                                    }
+                                                    is.close();
+                                                    os.close();
+
+                                                    mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+
+                                                    if (mJavaDetector.empty()) {
+                                                        Log.e(TAG, "Failed to load cascade classifier");
+                                                        mJavaDetector = null;
+                                                    } else
+                                                        Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
+
+                                                    cascadeDir.delete();
+
+                                                } catch (Exception e) {
+                                                    e.printStackTrace();
+                                                }
+
+
+                                                // builder1.setTitle("Find Side cars");
+                                                break;
+
+                                        }
+                                        levelDialog.dismiss();
+                                    }
+                                });
+
+                                levelDialog = builder1.create();
+                                levelDialog.show();
+                                break;
 
 
                         }
 
 
-                      //  Toast.makeText(getApplicationContext(), "You have clicked " + menuItem.getTitle(), Toast.LENGTH_LONG).show();
+                        //  Toast.makeText(getApplicationContext(), "You have clicked " + menuItem.getTitle(), Toast.LENGTH_LONG).show();
                         return true;
                     }
                 });
@@ -343,10 +552,11 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
             }
 
 
-
         });
 
-*/
+
+
+
 
         photo = (CheckBox) findViewById(R.id.photo1);
         alti_stay = (Button) findViewById(R.id.alt_stay);
@@ -361,30 +571,56 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
         add_waypoints.setEnabled(false);
 
 
+      // BroadcastReceiver mReceiver = new BroadcastReceiver() {
+//
+           // @Override
+           // public void onReceive(Context context, Intent intent) {
+                //unregisterReceiver(this);
+                alti_stay.setOnClickListener(MainActivity.this);
+                locate.setOnClickListener(MainActivity.this);
+                add.setOnClickListener(MainActivity.this);
+                add_waypoints.setOnClickListener(MainActivity.this);
+                clear.setOnClickListener(MainActivity.this);
+                config.setOnClickListener(MainActivity.this);
+                prepare.setOnClickListener(MainActivity.this);
+                start.setOnClickListener(MainActivity.this);
+                stop.setOnClickListener(MainActivity.this);
+                locate.setOnClickListener(MainActivity.this);
+                add.setOnClickListener(MainActivity.this);
 
-        alti_stay.setOnClickListener(this);
-        locate.setOnClickListener(this);
-        add.setOnClickListener(this);
-        add_waypoints.setOnClickListener(this);
-        clear.setOnClickListener(this);
-        config.setOnClickListener(this);
-        prepare.setOnClickListener(this);
-        start.setOnClickListener(this);
-        stop.setOnClickListener(this);
+                clear.setOnClickListener(MainActivity.this);
+                config.setOnClickListener(MainActivity.this);
+                prepare.setOnClickListener(MainActivity.this);
+                start.setOnClickListener(MainActivity.this);
+                stop.setOnClickListener(MainActivity.this);
+          // }
+       // };
+
+
+       /* Intent intent = new Intent("buttons");
+        sendBroadcast(intent);
+       IntentFilter batteryLevelFilter = new IntentFilter("buttons");*/
+        //mContext = getApplicationContext();
+        //MainActivity.this.registerReceiver(mReceiver, batteryLevelFilter);
+
         locate.setEnabled(false);
+                                    alti_stay.setOnClickListener(MainActivity.this);
+
+        locate.setEnabled(false);
+
+
         mConnectStatusTextView = (TextView) findViewById(R.id.ConnectStatusTextViewCamera);
         // init mVideoSurface
         mVideoSurface = (TextureView) findViewById(R.id.video_previewer_surface);
 
-       altitute=(TextView)findViewById(R.id.altitude);
+        altitute = (TextView) findViewById(R.id.altitude);
 
 
-       speed=(TextView)findViewById(R.id.speed);
+        //speed = (TextView) findViewById(R.id.speed);
 
-         //speedx=(TextView)findViewById(R.id.speedx);
+        //speedx=(TextView)findViewById(R.id.speedx);
 
-        speedy=(TextView)findViewById(R.id.speedy);
-
+        speedy = (TextView) findViewById(R.id.speedy);
 
 
         opencvView = (ImageView) findViewById(R.id.ImageFeed);
@@ -395,209 +631,9 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
         mShootPhotoModeBtn = (Button) findViewById(R.id.btn_shoot_photo_mode);
         mRecordVideoModeBtn = (Button) findViewById(R.id.btn_record_video_mode);
 
-
-        Spinner spinner = (Spinner) findViewById(R.id.camera);
-
-// Create an ArrayAdapter using the string array and a default spinner layout
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
-                R.array.Camera_mode, android.R.layout.simple_spinner_item);
-// Specify the layout to use when the list of choices appears
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-// Apply the adapter to the spinner
-        spinner.setAdapter(adapter);
-
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-
-            @Override
-            public void onNothingSelected(AdapterView<?> arg0) {
-                mVideoSurface.setVisibility(View.VISIBLE);
-                opencvView.setVisibility(View.INVISIBLE);
-                modec = false;
-            }
-
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View selectedItemView, int position, long id) {
-                switch (position) {
-
-                    case 0:
-                        mVideoSurface.setVisibility(View.VISIBLE);
-                        opencvView.setVisibility(View.INVISIBLE);
-                        modec = false;
-                        break;
-                    case 1:
-                        minWidth = 40;
-                        minHeight = 40;
-                        //mVideoSurface.setVisibility(View.INVISIBLE);
-                        opencvView.setVisibility(View.VISIBLE);
-                        modec = true;
-
-                        try {
-                            // load cascade file from application resources
-                            InputStream is = getResources().openRawResource(R.raw.cascade_good);
-                            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-                            mCascadeFile = new File(cascadeDir, "cascade_good.xml");
-
-                            FileOutputStream os = new FileOutputStream(mCascadeFile);
-
-                            byte[] buffer = new byte[4096];
-                            int bytesRead;
-                            while ((bytesRead = is.read(buffer)) != -1) {
-                                os.write(buffer, 0, bytesRead);
-                            }
-                            is.close();
-                            os.close();
-
-                            mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
-
-                            if (mJavaDetector.empty()) {
-                                Log.e(TAG, "Failed to load cascade classifier");
-                                mJavaDetector = null;
-                            } else
-                                Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
-
-                            cascadeDir.delete();
-
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
-                        break;
-                    case 2:
-                        minWidth = 48;
-                        minHeight = 96;
-                        opencvView.setVisibility(View.VISIBLE);
-                        modec = true;
-
-                        //mVideoSurface.setVisibility(View.INVISIBLE);
-
-                        try {
-                            // load cascade file from application resources
-                            InputStream is = getResources().openRawResource(R.raw.hogcascade_pedestrians);
-                            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-                            mCascadeFile = new File(cascadeDir, "hogcascade_pedestrians.xml");
-
-                            FileOutputStream os = new FileOutputStream(mCascadeFile);
-
-                            byte[] buffer = new byte[4096];
-                            int bytesRead;
-                            while ((bytesRead = is.read(buffer)) != -1) {
-                                os.write(buffer, 0, bytesRead);
-                            }
-                            is.close();
-                            os.close();
-
-                            mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
-
-                            if (mJavaDetector.empty()) {
-                                Log.e(TAG, "Failed to load cascade classifier");
-                                mJavaDetector = null;
-                            } else
-                                Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
-
-                            cascadeDir.delete();
-
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
-
-                        break;
-                    case 3:
-                        minWidth = 50;
-                        minHeight = 20;
-                        //mVideoSurface.setVisibility(View.INVISIBLE);
-                        opencvView.setVisibility(View.VISIBLE);
-                        modec = true;
-
-                        try {
-                            // load cascade file from application resources
-                            InputStream is = getResources().openRawResource(R.raw.side_car);
-                            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-                            mCascadeFile = new File(cascadeDir, "side_car.xml");
-
-                            FileOutputStream os = new FileOutputStream(mCascadeFile);
-
-                            byte[] buffer = new byte[4096];
-                            int bytesRead;
-                            while ((bytesRead = is.read(buffer)) != -1) {
-                                os.write(buffer, 0, bytesRead);
-                            }
-                            is.close();
-                            os.close();
-
-                            mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
-
-                            if (mJavaDetector.empty()) {
-                                Log.e(TAG, "Failed to load cascade classifier");
-                                mJavaDetector = null;
-                            } else
-                                Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
-
-                            cascadeDir.delete();
-
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
-                        break;
-                }
-
-
-                String item = parent.getItemAtPosition(position).toString();
-
-                // Showing selected spinner item
-                Toast.makeText(parent.getContext(), "Selected: " + item, Toast.LENGTH_LONG).show();
-
-            }
-        });
-
-
-       Spinner SpinImageRes = (Spinner) findViewById(R.id.image_resol);
-        ArrayAdapter<CharSequence> adapterImageRes = ArrayAdapter.createFromResource(this,
-                R.array.Image_Resolution, android.R.layout.simple_spinner_item);
-
-        SpinImageRes.setAdapter(adapterImageRes);
-
-       // SpinImageRes.setOnClickListener(this);
-
-        SpinImageRes.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-
-            @Override
-            public void onNothingSelected(AdapterView<?> arg0) {
-                imHeight = 120;
-                imWidth = 160;
-            }
-
-            @Override
-            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
-                switch (position) {
-                    case 0:
-                        imHeight = 120;
-                        imWidth = 160;
-                        break;
-                    case 1:
-                        imHeight = 320;
-                        imWidth = 240;
-                        break;
-                    case 2:
-                        imHeight = 640;
-                        imWidth = 480;
-                        break;
-                    case 3:
-                        imHeight = 1024;
-                        imWidth = 600;
-                        break;
-                }
-                String item = parentView.getItemAtPosition(position).toString();
-
-                // Showing selected spinner item
-                Toast.makeText(parentView.getContext(), "Selected: " + item, Toast.LENGTH_LONG).show();
-            }
-        });
-
-        if (null != mVideoSurface) {
-            mVideoSurface.setSurfaceTextureListener(this);
-        }
+        //if (null != mVideoSurface) {
+        //  mVideoSurface.setSurfaceTextureListener(this);
+        // }
 
         mCaptureBtn.setOnClickListener(this);
         mRecordBtn.setOnClickListener(this);
@@ -650,6 +686,7 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
         }
 
         marks = new LinkedList<>();
+        contactList = new ArrayList<>();
         // m=new Mark(getApplicationContext());
         //final GestureDetector gestureDetector = new GestureDetector(this, new SingleTDetector());
 
@@ -668,42 +705,56 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
         this.mapView = (MapView) findViewById(R.id.mapview);
 
 
-        this.mapView.setClickable(true);
-        this.mapView.getMapScaleBar().setVisible(true);
-        this.mapView.setBuiltInZoomControls(true);
-        this.mapView.setZoomLevelMin((byte) 10);
-        this.mapView.setZoomLevelMax((byte) 20);
-        // create a tile cache of suitable size
-        TileCache tileCache = AndroidUtil.createTileCache(this, "mapcache",
-                this.mapView.getModel().displayModel.getTileSize(), 1f,
-                this.mapView.getModel().frameBufferModel.getOverdrawFactor());
-
-        // tile renderer layer using internal render theme
-        MapDataStore mapDataStore = new MapFile(new File(Environment.getExternalStorageDirectory(), MAP_FILE));
-        TileRendererLayer tileRendererLayer = new TileRendererLayer(tileCache, mapDataStore,
-                this.mapView.getModel().mapViewPosition, AndroidGraphicFactory.INSTANCE);
-        tileRendererLayer.setXmlRenderTheme(InternalRenderTheme.OSMARENDER);
-
-        // only once a layer is associated with a mapView the rendering starts
-        this.mapView.getLayerManager().getLayers().add(tileRendererLayer);
-        this.mapView.setCenter(new LatLong(35.14448546, 33.40969473));
 
 
-        this.mapView.setZoomLevel((byte) 12);
-
-        initUI();
 
 
-        mapView.setOnTouchListener(new View.OnTouchListener() {
+                mapView.setClickable(true);
+                mapView.getMapScaleBar().setVisible(true);
+                mapView.setBuiltInZoomControls(true);
+                mapView.setZoomLevelMin((byte) 10);
+                mapView.setZoomLevelMax((byte) 20);
+                // create a tile cache of suitable size
+                TileCache tileCache = AndroidUtil.createTileCache(getApplicationContext(), "mapcache",
+                        mapView.getModel().displayModel.getTileSize(), 1f,
+                        mapView.getModel().frameBufferModel.getOverdrawFactor());
+
+                // tile renderer layer using internal render theme
+                MapDataStore mapDataStore = new MapFile(new File(Environment.getExternalStorageDirectory(), MAP_FILE));
+                TileRendererLayer tileRendererLayer = new TileRendererLayer(tileCache, mapDataStore,
+                        mapView.getModel().mapViewPosition, AndroidGraphicFactory.INSTANCE);
+                tileRendererLayer.setXmlRenderTheme(InternalRenderTheme.OSMARENDER);
+
+                // only once a layer is associated with a mapView the rendering starts
+                mapView.getLayerManager().getLayers().add(tileRendererLayer);
+                mapView.setCenter(new LatLong(35.14448546, 33.40969473));
+
+
+                mapView.setZoomLevel((byte) 12);
+        MainActivity.mapView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 gestureDetector.onTouchEvent(event);
                 return false;
             }
         });
+
+
+
+
+
+       /* mapView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                gestureDetector.onTouchEvent(event);
+                return false;
+            }
+        });*/
         IntentFilter filter = new IntentFilter();
         filter.addAction(DJIDemoApplication.FLAG_CONNECTION_CHANGE);
         registerReceiver(mReceiver, filter);
+
+
 
 
         // new CameraDrone(getApplicationContext()).intCamera();
@@ -761,13 +812,19 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
             });
 
         }
-    }
+
+                initUI();
+
+        mVideoSurface.setVisibility(View.VISIBLE);
+        opencvView.setVisibility(View.INVISIBLE);}
+
 
 
     protected BroadcastReceiver mReceiver = new BroadcastReceiver() {
 
         @Override
         public void onReceive(Context context, Intent intent) {
+
             onProductConnectionChange();
 
             updateTitleBar();
@@ -791,60 +848,121 @@ public class MainActivity extends AppCompatActivity implements MenuItem.OnMenuIt
 
             setResultToToast("Product connected");
             mMissionManager = product.getMissionManager();
+           // mMissionManager.se
+
+
             mMissionManager.setMissionProgressStatusCallback(this);
+
+
             mMissionManager.setMissionExecutionFinishedCallback(this);
         }
 
+//mMissionManager.getMissionProgressStatusCallback().missionProgressStatus(this);
+        //DJIWaypointMission.DJIWaypointMissionExecuteState a;
+
+
         mWaypointMission = new DJIWaypointMission();
-        mWaypointMission.flightPathMode=DJIWaypointMission.DJIWaypointMissionFlightPathMode.Normal;
+
+        mWaypointMission.flightPathMode = DJIWaypointMission.DJIWaypointMissionFlightPathMode.Normal;
+
+
     }
 
 
     private void initFlightController() {
         DJIBaseProduct product = DJIDemoApplication.getProductInstance();
+
         if (product != null && product.isConnected()) {
             if (product instanceof DJIAircraft) {
+
                 mFlightController = ((DJIAircraft) product).getFlightController();
             }
+
         }
 
 
-
         if (mFlightController != null) {
+
+             batterystatus= new DJIBattery.DJIBatteryStateUpdateCallback(){
+
+
+
+                @Override
+                public  void onResult (DJIBatteryState state)
+                {
+                    final TextView batteryPercent = (TextView) findViewById(R.id.battery);
+                    final int battery = state.getBatteryEnergyRemainingPercent();
+                    runOnUiThread(new Runnable()
+                    {
+                        public void run()
+                        {
+                            batteryPercent.setText(battery + "%");
+                        }
+                    });
+                }
+            };
+
+            product.getBattery().setBatteryStateUpdateCallback(batterystatus);
+
+
             locate.setEnabled(true);
             mFlightController.setUpdateSystemStateCallback(new DJIFlightControllerDelegate.FlightControllerUpdateSystemStateCallback() {
                 @Override
                 public void onResult(DJIFlightControllerDataType.DJIFlightControllerCurrentState state) {
 
+
+
+
+/*
 if (photocheck&& dm<drone_move.length)
                     if (new LatLong(droneLocationLat,droneLocationLng).equals(new LatLong(drone_move[dm].lat,drone_move[dm].lon))){
                         new CameraDrone(MainActivity.this).captureAction();
                         dm++;
-                    }
+                    }*/
 
 
                     final TextView speedx = (TextView) findViewById(R.id.speedx);
+                    final TextView speedu = (TextView) findViewById(R.id.speed);
 
 
 
-                    final float uy=state.getVelocityY();
-                    final double u=Math.sqrt(Math.pow(state.getVelocityX(),2)+Math.pow(state.getVelocityY(),2));
-                    final double ux=state.getVelocityX();
-                    final double alt=state.getUltrasonicHeight();
+                    final double uy = state.getVelocityY();
+
+                    final double ux = state.getVelocityX();
+                    final double u = Math.sqrt(Math.pow(uy, 2) + Math.pow(ux, 2));
+                    final double alt = state.getAircraftLocation().getAltitude();
+
+
+
+
 
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
+                            /*BroadcastReceiver batteryLevelReceiver = new BroadcastReceiver() {
+                                public void onReceive(Context context, Intent intent) {
+                                    context.unregisterReceiver(this);
+                                    int currentLevel = intent.getIntExtra(battery, -1);
+                                    int scale = 100;
+                                    int level = -1;
+                                    //if (currentLevel >= 0 && scale > 0) {
+                                        level = (battery1 + 100) ;
+                                    //}
+                                    //batteryPercent.setText( batterystate.getBatteryEnergyRemainingPercent() + "%");
+                                }
+                            };
+                            IntentFilter batteryLevelFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+                            registerReceiver(batteryLevelReceiver, batteryLevelFilter);*/
 
-                            altitute.setText("height: "+alt+" m");
-                            speed.setText("u: "+u+"m/s");
-                            speedx.setText("Ux: "+ux+" m/s");
-                            speedy.setText("Uy: "+Float.toString(uy)+" m/s");
+
+                            //if (ultrasonic)
+                            altitute.setText("height: " + alt + " m");
+
+                            speedu.setText("u: " + (Math.sqrt(Math.pow(uy, 2) + Math.pow(ux, 2))) + "m/s");
+                            speedx.setText("Ux: " + ux + " m/s");
+                            speedy.setText("Uy: " + uy + " m/s");
                         }
                     });
-
-
-
 
 
                     droneLocationLat = state.getAircraftLocation().getLatitude();
@@ -856,8 +974,6 @@ if (photocheck&& dm<drone_move.length)
                     // }
 
 
-
-
                 }
             });
         }
@@ -867,8 +983,20 @@ if (photocheck&& dm<drone_move.length)
      * DJIMissionManager Delegate Methods
      */
     @Override
-    public void missionProgressStatus(DJIMission.DJIMissionProgressStatus progressStatus) {
+    public void missionProgressStatus(DJIMissionProgressStatus progressStatus) {
 
+//        setResultToToast("waypoint :"+ progressStatus.getError().getDescription());
+        if (progressStatus instanceof DJIWaypointMissionStatus) {
+            DJIWaypointMissionStatus pointingStatus = (DJIWaypointMissionStatus)progressStatus;
+           // setResultToToast("target : " +(progressStatus instanceof DJIWaypointMissionStatus) );
+
+//if ( mWaypointReached.getExecState()!=null)
+
+            if (pointingStatus.isWaypointReached()){
+                new CameraDrone(MainActivity.this).captureAction();
+            setResultToToast("waypoint Reached ");}
+
+        }
     }
 
     /**
@@ -891,7 +1019,7 @@ if (photocheck&& dm<drone_move.length)
         final LatLong LatLong = new LatLong(drone_move[0].lat, drone_move[0].lon);
 
         Drawable drawable = getResources().getDrawable(R.drawable.red_mark);
-        Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
+        org.mapsforge.core.graphics.Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
         bitmap.incrementRefCount();
 
 
@@ -899,7 +1027,6 @@ if (photocheck&& dm<drone_move.length)
         DJIWaypoint mWaypoint = new DJIWaypoint(LatLong.latitude, LatLong.longitude, altitude);
 
 
-        boolean flag4 = false;
         Run r;
         k.setOnTabAction(r = new Run(0, getApplicationContext()));
 
@@ -967,8 +1094,8 @@ if (photocheck&& dm<drone_move.length)
 
 
     // Update the drone location based on states from MCU.
-   public void updateDroneLocation() {
-      //
+    public void updateDroneLocation() {
+        //
         //this.mapView.setZoomLevel((byte) 12);
 
 
@@ -976,7 +1103,7 @@ if (photocheck&& dm<drone_move.length)
             @Override
             public void run() {
 
-                speed.setText("m/s");
+
                 if (droneMarker != null) {
                     mapView.getLayerManager().getLayers().remove(droneMarker);
                 }
@@ -985,11 +1112,11 @@ if (photocheck&& dm<drone_move.length)
                     final LatLong pos = new LatLong(droneLocationLat, droneLocationLng);
 
                     Drawable drawable = getResources().getDrawable(R.drawable.aircraft);
-                    Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
+                    org.mapsforge.core.graphics.Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
                     bitmap.incrementRefCount();
 
 
-                   droneMarker = new Mark(pos, bitmap, 0, -bitmap.getHeight() / 2);
+                    droneMarker = new Mark(pos, bitmap, 0, -bitmap.getHeight() / 2);
 
                     mapView.getLayerManager().getLayers().add(droneMarker);
                     marks.add(droneMarker);
@@ -1049,7 +1176,7 @@ if (photocheck&& dm<drone_move.length)
         flag = false;
     }
 
-    public boolean modec = false;
+    public static boolean modec = false;
 
 
     boolean flag1 = true, a1 = false, h1 = false;
@@ -1081,7 +1208,6 @@ if (photocheck&& dm<drone_move.length)
             case R.id.locate: {
 
 
-
                 if (checkGpsCoordination(droneLocationLat, droneLocationLng)) {
                     updateDroneLocation();
                     cameraUpdate();
@@ -1103,6 +1229,7 @@ if (photocheck&& dm<drone_move.length)
                         @Override
                         public void onCheckedChanged(RadioGroup group, int checkedId) {
                             if (checkedId == R.id.drone) {
+                                random_marks = new LinkedList<Layer>();
                                 type = 1;
                                 enableDisableAdd();
                             } else if (checkedId == R.id.grid) {
@@ -1111,8 +1238,7 @@ if (photocheck&& dm<drone_move.length)
                             } else if (checkedId == R.id.square) {
                                 changeflag();
                                 type = 2;
-                            }
-                            else if (checkedId == R.id.fromefile) {
+                            } else if (checkedId == R.id.fromefile) {
                                 readfile();
                             }
 
@@ -1159,6 +1285,10 @@ if (photocheck&& dm<drone_move.length)
 
                 for (int i = 0; i < marks.size(); i++)
                     mapView.getLayerManager().getLayers().remove(marks.get(i));
+
+                if (random_marks != null)
+                    for (int i = 0; i < random_marks.size(); i++)
+                        mapView.getLayerManager().getLayers().remove(random_marks.get(i));
                 if (mWaypointMission != null) {
                     mWaypointMission.removeAllWaypoints(); // Remove all the waypoints added to the task
                 }
@@ -1207,7 +1337,7 @@ if (photocheck&& dm<drone_move.length)
             add.setText("Exit");
         } else {
             if (!marks.isEmpty())
-                altitude_w=new float[marks.size()];
+                altitude_w = new float[marks.size()];
             isAdd = false;
             add.setText("Add");
         }
@@ -1314,6 +1444,10 @@ if (photocheck&& dm<drone_move.length)
     }
 
     private void configWayPointMission() {
+        Coordinates c=new Coordinates(0,0);
+
+       c.sealevel_altitute(drone_move);
+
 
         if (mWaypointMission != null) {
             mWaypointMission.finishedAction = mFinishedAction;
@@ -1324,29 +1458,33 @@ if (photocheck&& dm<drone_move.length)
             DJIWaypoint.DJIWaypointAction tphoto = new DJIWaypoint.DJIWaypointAction(DJIWaypointActionType.StartTakePhoto, 1);
 
 
-setResultToToast("size waypoints "+mWaypointMission.waypointsList.size());
+            setResultToToast("size waypoints " + mWaypointMission.waypointsList.size());
             if (mWaypointMission.waypointsList.size() > 0) {
                 for (int i = 0; i < mWaypointMission.waypointsList.size(); i++) {
 
                     //if (i<altitude_w.length)
-                    if (altitude_w[i] > 0) {
 
+                    if (altitude_w[i] > 0 && type == 2) {
+                        setResultToToast("Change altitute ");
                         mWaypointMission.getWaypointAtIndex(i).altitude = altitude_w[i];
                     } else
                         mWaypointMission.getWaypointAtIndex(i).altitude = altitude;
                     //mWaypointMission.getWaypointAtIndex(i).altitude = altitude_w[i];
+
+
                     mWaypointMission.getWaypointAtIndex(i).addAction(mstay);
-                    if (photocheck) {
+                   /* if (photocheck) {
 
                         mWaypointMission.getWaypointAtIndex(i).addAction(tphoto);
-                        photocheck = false;
 
-                    }
+
+                    }*/
 
 
                 }
             }
         }
+        photocheck = false;
     }
 
     private void prepareWayPointMission() {
@@ -1356,12 +1494,34 @@ setResultToToast("size waypoints "+mWaypointMission.waypointsList.size());
             DJIMission.DJIMissionProgressHandler progressHandler = new DJIMission.DJIMissionProgressHandler() {
                 @Override
                 public void onProgress(DJIMission.DJIProgressType type, float progress) {
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mProgress.setVisibility(View.VISIBLE);
+//stuff that updates ui
+
+                        }
+                    });
+
+
+                    mProgress.setProgress((int)(progress*100 ));
                 }
             };
 
             mMissionManager.prepareMission(mWaypointMission, progressHandler, new DJIBaseComponent.DJICompletionCallback() {
                 @Override
                 public void onResult(DJIError error) {
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mProgress.setVisibility(View.INVISIBLE);
+//stuff that updates ui
+
+                        }
+                    });
+
                     setResultToToast(error == null ? "Mission Prepare Successfully" : error.getDescription());
                 }
             });
@@ -1372,7 +1532,6 @@ setResultToToast("size waypoints "+mWaypointMission.waypointsList.size());
     private void startWaypointMission() {
 
         if (mMissionManager != null) {
-
             mMissionManager.startMissionExecution(new DJIBaseComponent.DJICompletionCallback() {
                 @Override
                 public void onResult(DJIError error) {
@@ -1386,6 +1545,7 @@ setResultToToast("size waypoints "+mWaypointMission.waypointsList.size());
     private void stopWaypointMission() {
 
         if (mMissionManager != null) {
+
             mMissionManager.stopMissionExecution(new DJIBaseComponent.DJICompletionCallback() {
 
                 @Override
@@ -1437,10 +1597,10 @@ setResultToToast("size waypoints "+mWaypointMission.waypointsList.size());
     protected void onProductChange() {
         initPreviewer();
     }
-
+    DJIBaseProduct product;
     private void initPreviewer() {
 
-        DJIBaseProduct product = FPVDemoApplication.getProductInstance();
+        product = FPVDemoApplication.getProductInstance();
 
         if (product == null || !product.isConnected()) {
             // showToast(getString(R.string.disconnected));
@@ -1484,6 +1644,8 @@ setResultToToast("size waypoints "+mWaypointMission.waypointsList.size());
 
     @Override
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+
+        Log.d("destroyed", modec + " ");
         Log.e(TAG, "onSurfaceTextureDestroyed");
         if (mCodecManager != null) {
             mCodecManager.cleanSurface();
@@ -1492,22 +1654,107 @@ setResultToToast("size waypoints "+mWaypointMission.waypointsList.size());
 
         return false;
     }
-
+     android.graphics.Bitmap bm;
+    int log=0;
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+
         if (modec) {
 
-            final android.graphics.Bitmap image = mVideoSurface.getBitmap();
-            //Bitmap bm = Bitmap.createScaledBitmap(image,100, 100, true);
-            android.graphics.Bitmap bm = image.copy(image.getConfig(), true);
+            if (log==1) {
+               return;
 
-            if (bm == null)
-                return;
+            }
+            android.graphics.Bitmap image = mVideoSurface.getBitmap();
+
+            bm = image.copy(image.getConfig(), true);
+            new DownloadFilesTask(opencvView).execute(bm);
+          // BitmapFactory.Options options = new BitmapFactory.Options();
+           // options.inSampleSize=2;
+
+            //DownloadFilesTask d=new DownloadFilesTask();
+
+
+
+
+
+          /*  if (bm != null&& !bm.isRecycled()) {
+                imCanvas=null;
+                bm.recycle();
+                bm = null;
+
+                System.gc();
+
+            }
+*/
+            //  startService(new Intent(getBaseContext(), BackgroundService.class));
+
+
+
+
+        }
+
+
+
+
+          //  Intent intent = new Intent("Open cv");
+           // sendBroadcast(intent);
+           // IntentFilter batteryLevelFilter = new IntentFilter("Open cv");
+            //mContext = getApplicationContext();
+            //MainActivity.this.registerReceiver(opencvReceiver, batteryLevelFilter);
+
+            //mVideoSurface.lockCanvas();
+            //mVideoSurface.unlockCanvasAndPost(imCanvas);
+
+
+
+        //opencvView.setImageDrawable(new BitmapDrawable(getResources(), bm));
+          /* Canvas rCanvas = mSurfaceHolder.lockCanvas();
+
+            // reset the canvas to blank at the start
+            rCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+
+            // translate to the desired position
+            rCanvas.translate(0,y);
+
+            // draw the bitmap
+            rCanvas.drawBitmap(bm,0, 0, null);
+            rCanvas.drawBitmap(new BitmapDrawable(getResources(), bm),0, 0, null);
+*/
+
+
+        //Toast.makeText(MainActivity.this,String.format("%d - %d - %d - %d",image.getPixel(100,100)&0x000000FF,bmap.getPixel(100,100)&0x000000FF,image.getHeight(),image.getWidth()),Toast.LENGTH_SHORT).show();*/
+
+
+        // opencv_detection();
+
+    }
+
+    private class DownloadFilesTask extends AsyncTask<android.graphics.Bitmap, Void, Bitmap> {
+        private final WeakReference<ImageView> imageViewReference;
+
+
+        public DownloadFilesTask(ImageView imageView) {
+            // Use a WeakReference to ensure the ImageView can be garbage collected
+            imageViewReference = new WeakReference<ImageView>(imageView);
+        }
+
+        protected  void onPreExecute(){
+
+
+        }
+
+
+        protected Bitmap doInBackground(android.graphics.Bitmap... image) {
+            log=1;
+
+            if (image[0] == null)
+                return null;
             Mat rgba = new Mat();
             Mat gray = new Mat();
             Mat resizedImg = Mat.zeros(new Size(imWidth, imHeight), rgba.type());
 
-            Utils.bitmapToMat(bm, rgba);
+            Utils.bitmapToMat(image[0], rgba);
 
             Imgproc.resize(rgba, resizedImg, new Size(imWidth, imHeight));
             //Toast.makeText(this.getApplicationContext(), String.format("%d - %d", resizedImg.width(), resizedImg.height()), Toast.LENGTH_SHORT).show();
@@ -1557,21 +1804,37 @@ setResultToToast("size waypoints "+mWaypointMission.waypointsList.size());
             }
 
             Imgproc.resize(resizedImg, rgba, rgba.size());
-            Utils.matToBitmap(rgba, bm);
+            Utils.matToBitmap(rgba,image[0]);
 
-            Canvas imCanvas = new Canvas(bm);
-            imCanvas.drawBitmap(bm, 0, 0, null);
-            opencvView.setImageDrawable(new BitmapDrawable(getResources(), bm));
+           Canvas  imCanvas = new Canvas(image[0]);
+            imCanvas.drawBitmap(image[0], 0, 0, null);
 
-
-            //Toast.makeText(MainActivity.this,String.format("%d - %d - %d - %d",image.getPixel(100,100)&0x000000FF,bmap.getPixel(100,100)&0x000000FF,image.getHeight(),image.getWidth()),Toast.LENGTH_SHORT).show();
+return image[0];
 
         }
-        // opencv_detection();
 
+        protected void onProgressUpdate(Integer... progress) {
+            //setProgressPercent(progress[0]);
+        }
+
+        protected void onPostExecute(Bitmap result) {
+
+            //opencvView.setImageDrawable(new BitmapDrawable(getResources(), result));
+
+            if (imageViewReference != null && result != null) {
+                final ImageView imageView = imageViewReference.get();
+                if (imageView != null) {
+                    imageView.setImageBitmap( result);
+                }
+            }
+            log=0;
+        }
     }
 
+
+
     public void showToast(final String msg) {
+
         runOnUiThread(new Runnable() {
             public void run() {
                 Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
@@ -1588,8 +1851,8 @@ setResultToToast("size waypoints "+mWaypointMission.waypointsList.size());
         final EditText a = (EditText) wayPointSettings.findViewById(R.id.ang);
         final EditText h = (EditText) wayPointSettings.findViewById(R.id.h);
         final TextView d = (TextView) wayPointSettings.findViewById(R.id.distance);
-a1=false;
-        h1=false;
+        a1 = false;
+        h1 = false;
 
         a.addTextChangedListener(new TextWatcher() {
 
@@ -1603,7 +1866,7 @@ a1=false;
 
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-               // d.clearComposingText();
+                // d.clearComposingText();
             }
 
             @Override
@@ -1613,12 +1876,12 @@ a1=false;
                     a1 = true;
                     if (h1) {
                         d.clearComposingText();
-                       long al=Integer.parseInt(h.getText().toString().trim());
-                        long f=Integer.parseInt(a.getText().toString().trim());
-                        Log.d("Distance "," "+al+" "+f);
+                        long al = Integer.parseInt(h.getText().toString().trim());
+                        long f = Integer.parseInt(a.getText().toString().trim());
+                        Log.d("Distance ", " " + al + " " + f);
                         long r = Math.abs(Math.round(2.0 * al * Math.tan(Math.toRadians(f / 2.0))));
 
-                        Log.d("Distance "," "+r);
+                        Log.d("Distance ", " " + r);
 
                         d.setText(String.valueOf(r));
 
@@ -1628,7 +1891,7 @@ a1=false;
 
                 } else {
                     d.clearComposingText();
-                   // d.setText(" ");
+                    // d.setText(" ");
                     a1 = false;
                 }
 
@@ -1638,13 +1901,13 @@ a1=false;
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-               // d.clearComposingText();
+                // d.clearComposingText();
                 //Your query to fetch Data
             }
 
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-               // d.clearComposingText();
+                // d.clearComposingText();
             }
 
             @Override
@@ -1654,11 +1917,11 @@ a1=false;
                     d.clearComposingText();
 
                     if (a1) {
-                        long al=Integer.parseInt(h.getText().toString().trim());
-                        long f=Integer.parseInt(a.getText().toString().trim());
+                        long al = Integer.parseInt(h.getText().toString().trim());
+                        long f = Integer.parseInt(a.getText().toString().trim());
 
                         long r = Math.abs(Math.round(2.0 * al * Math.tan(Math.toRadians(f / 2.0))));
-                        Log.d("Distance "," "+r);
+                        Log.d("Distance ", " " + r);
                         d.setText(String.valueOf(r));
                     }
 
@@ -1666,7 +1929,7 @@ a1=false;
                 } else {
                     h1 = false;
                     d.clearComposingText();
-                   // d.setText(" ");
+                    // d.setText(" ");
                     //
                 }
                 //Your query to fetch Data
@@ -1674,7 +1937,7 @@ a1=false;
             }
         });
 
-        if (h1&&a1){
+        if (h1 && a1) {
 
         }
 
@@ -1755,108 +2018,97 @@ a1=false;
                 .show();
     }
 
-public void readfile() {
-
-List<Coordinates> distance=new LinkedList<Coordinates>();
-    String line = null;
-    Drawable drawable = getResources().getDrawable(R.drawable.red_mark);
-    Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
-    bitmap.incrementRefCount();
-
-    try {
-
-        File f=new File(Environment.getExternalStorageDirectory(),"passaloi");
-       // FileInputStream fileInputStream = new FileInputStream (f);
-
-        Scanner scan = new Scanner(f);
-
-
-        //InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
-      //  BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-
-      scan.nextLine();
-
-
-        while ( (scan.hasNext()) )
-        {
-           scan.next();
-           float alt= scan.nextInt();
-           double lat=scan.nextDouble();
-            double lon=scan.nextDouble();
 
 
 
-            //Mark k = new Mark(new LatLong(lon,lat), bitmap, 0, -bitmap.getHeight() / 2);
-            if (checkGpsCoordination(droneLocationLat,droneLocationLng))
+    /**
+     * Async task class to get json by making HTTP call
+     */
 
-                distance.add(new Coordinates(new LatLong(lon,lat),Coordinates.distFrom(droneLocationLat,droneLocationLng, lon, lat),alt));
+    public void readfile() {
 
 
 
 
+
+
+        List<Coordinates> distance = new LinkedList<Coordinates>();
+        String line = null;
+        Drawable drawable = getResources().getDrawable(R.drawable.red_mark);
+        org.mapsforge.core.graphics.Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
+        bitmap.incrementRefCount();
+
+        try {
+
+            File f = new File(Environment.getExternalStorageDirectory(), "passaloi");
+            // FileInputStream fileInputStream = new FileInputStream (f);
+
+            Scanner scan = new Scanner(f);
+
+
+            //InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
+            //  BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+
+            scan.nextLine();
+
+
+            while ((scan.hasNext())) {
+                scan.next();
+                float alt = scan.nextInt();
+                double lat = scan.nextDouble();
+                double lon = scan.nextDouble();
+
+
+                //Mark k = new Mark(new LatLong(lon,lat), bitmap, 0, -bitmap.getHeight() / 2);
+                if (checkGpsCoordination(droneLocationLat, droneLocationLng))
+
+                    distance.add(new Coordinates(new LatLong(lon, lat), Coordinates.distFrom(droneLocationLat, droneLocationLng, lon, lat), alt));
+
+
+            }
+            //fileInputStream.close();
+
+
+        } catch (FileNotFoundException ex) {
+            Log.d(TAG, ex.getMessage());
+        } catch (IOException ex) {
+            Log.d(TAG, ex.getMessage());
         }
-        //fileInputStream.close();
+
+        //drawable = getResources().getDrawable(R.drawable.aircraft);
+        // bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
+        //bitmap.incrementRefCount();
 
 
+        Collections.sort(distance, new Comparator<Coordinates>() {
+            @Override
+            public int compare(Coordinates o1, Coordinates o2) {
+                if (o1.distance > o2.distance)
+                    return 1;
+                else if (o1.distance < o2.distance)
+                    return -1;
+                return 0;
+            }
+        });
+        // mapView.getLayerManager().getLayers().add(k);
+        //distance=bubbleSort(distance);
 
-    }
-    catch(FileNotFoundException ex) {
-        Log.d(TAG, ex.getMessage());
-    }
-    catch(IOException ex) {
-        Log.d(TAG, ex.getMessage());
-    }
-
-    //drawable = getResources().getDrawable(R.drawable.aircraft);
-  // bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
-    //bitmap.incrementRefCount();
-
-
-    Collections.sort(distance, new Comparator<Coordinates>() {
-        @Override
-        public int compare(Coordinates o1, Coordinates o2) {
-            if (o1.distance>o2.distance)
-                return 1;
-            else if (o1.distance<o2.distance)
-                return -1;
-            return 0;
+        for (int i = 1; i < distance.size(); i++) {
+            Log.d("Distance ", " " + distance.get(i).distance);
         }
-    });
-   // mapView.getLayerManager().getLayers().add(k);
-    //distance=bubbleSort(distance);
+        //Log.d("Distance "," "+distance.get(0).distance);
+        Mark k;
+        if (distance.get(0).distance < 2) {
+
+            //Log.d("Location ",distance.get(0).l.+" "+distance.get(0).lon);
+            k = new Mark(distance.get(0).l, bitmap, 0, -bitmap.getHeight() / 2);
+            this.mapView.setCenter(distance.get(0).l);
 
 
-        //Log.d("Distance "," "+distance.get(i).distance);
-    Mark k;
-    if (distance.get(0).distance<2){
-    //Log.d("Location ",distance.get(0).l.+" "+distance.get(0).lon);
-       k = new Mark(distance.get(0).l, bitmap, 0, -bitmap.getHeight() / 2);
-    this.mapView.setCenter(distance.get(0).l);
-
-
-    this.mapView.setZoomLevel((byte) 20);
-        marks.add(k);
-        mapView.getLayerManager().getLayers().add(k);
-        DJIWaypoint mWaypoint = new DJIWaypoint(distance.get(0).l.latitude, distance.get(0).l.longitude, altitude);
-        //Add Waypoints to Waypoint arraylist;
-        if (mWaypointMission != null) {
-
-            mWaypointMission.addWaypoint(mWaypoint);
-        }
-    }
-
-
-float max=distance.get(0).altitute;
-    for (int i=1;i<distance.size();i++){
-
-        if (distance.get(i).altitute>max)
-        altitude=max+3;
-
-        if (Coordinates.distFrom(distance.get(i-1).l.latitude,distance.get(i-1).l.longitude,distance.get(i).l.latitude,distance.get(i).l.longitude)<2){
-             k = new Mark(distance.get(i).l, bitmap, 0, -bitmap.getHeight() / 2);
-            mapView.getLayerManager().getLayers().add(k);
+            this.mapView.setZoomLevel((byte) 20);
             marks.add(k);
-            DJIWaypoint mWaypoint = new DJIWaypoint(distance.get(i).l.latitude, distance.get(i).l.longitude, altitude);
+            mapView.getLayerManager().getLayers().add(k);
+            DJIWaypoint mWaypoint = new DJIWaypoint(distance.get(0).l.latitude, distance.get(0).l.longitude, altitude);
             //Add Waypoints to Waypoint arraylist;
             if (mWaypointMission != null) {
 
@@ -1864,17 +2116,55 @@ float max=distance.get(0).altitute;
             }
         }
 
+        Paint paint = AndroidGraphicFactory.INSTANCE.createPaint();
+        paint.setColor(Color.BLUE);
+        paint.setStyle(Style.STROKE);
+        paint.setStrokeWidth(8);
+        Polyline polyline = new Polyline(paint, AndroidGraphicFactory.INSTANCE);
+        List<LatLong> latLongs;
+        latLongs = polyline.getLatLongs();
+        float max = distance.get(0).altitute;
 
 
+
+        for (int i = 1; i < distance.size()&&distance.get(0).distance < 2; i++) {
+
+
+            if (distance.get(i).altitute > max)
+                max = distance.get(i).altitute + 3;
+
+
+            //latLongs.add(distance.get(i - 1).l);
+           // Log.d("Lat Long : ",i+" "+distance.get(i).l.getLatitude() +" "+distance.get(i).l.getLongitude());
+            Log.d("Lat Long: ",(i-1)+" "+distance.get(i-1).l.getLatitude() +" "+distance.get(i-1).l.getLongitude());
+            //Log.d("Waypoints passaloi: ", Coordinates.distFrom(distance.get(i - 1).l.getLatitude(), distance.get(i - 1).l.getLongitude(), distance.get(i).l.getLatitude(), distance.get(i).l.getLongitude()) + " ");
+            if (Coordinates.distFrom(distance.get(i - 1).l.getLatitude(), distance.get(i - 1).l.getLongitude(), distance.get(i).l.getLatitude(), distance.get(i).l.getLongitude()) < 2) {
+                k = new Mark(distance.get(i).l, bitmap, 0, -bitmap.getHeight() / 2);
+
+                latLongs.add(distance.get(i - 1).l);
+                mapView.getLayerManager().getLayers().add(k);
+                marks.add(k);
+                //Log.d("Waypoints passaloi: ", Coordinates.distFrom(distance.get(i - 1).l.latitude, distance.get(i - 1).l.longitude, distance.get(i).l.latitude, distance.get(i).l.longitude) + " ");
+                DJIWaypoint mWaypoint = new DJIWaypoint(distance.get(i).l.latitude, distance.get(i).l.longitude, altitude);
+                //Add Waypoints to Waypoint arraylist;
+                if (mWaypointMission != null) {
+
+                    mWaypointMission.addWaypoint(mWaypoint);
+                }
+            } else break;
+
+
+        }
+altitude=max;
+        if (polyline != null) {
+            mapView.getLayerManager().getLayers().add(polyline);
+            marks.add(polyline);
+        }
 
 
     }
 
 
-
-
-
-}
 
 
 }

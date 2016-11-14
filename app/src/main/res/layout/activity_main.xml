@@ -101,13 +101,11 @@
 
 
 
-
      <LinearLayout android:layout_width="fill_parent"
           android:layout_height="fill_parent"
           android:orientation="horizontal">
 
-
-             <RelativeLayout android:layout_width="0dp"
+         <RelativeLayout android:layout_width="0dp"
                  android:layout_height="fill_parent"
                  android:layout_weight="1" >
 
@@ -116,9 +114,9 @@
                      android:id="@+id/mapview"
                      android:layout_width="fill_parent"
                      android:layout_height="fill_parent"
-                     android:layout_alignParentLeft="true"
                      android:layout_weight="14"
-                     android:background="#000000" />
+                     android:background="#000000"
+                     android:layout_alignParentTop="true" />
 
                  <ImageButton
                      android:id="@+id/locate"
@@ -129,10 +127,24 @@
                      android:background="@android:color/transparent"
                      android:src="@drawable/rszgps" />
 
-             </RelativeLayout>
+             <ProgressBar
+                 android:id="@+id/progressbar"
+                 android:background="@color/colorAccent"
+                 android:layout_width="800dp"
+                 android:layout_height="30dp"
+                 style="@android:style/Widget.ProgressBar.Horizontal"
+                 android:layout_weight="0.16"
+
+                 android:layout_marginBottom="56dp"
+                 android:layout_alignParentBottom="true"
+                 android:layout_toEndOf="@+id/locate" />
+
+
+         </RelativeLayout>
 
 
          <RelativeLayout
+             android:id="@+id/Video"
              android:layout_width="0dp"
                  android:layout_height="fill_parent"
                  android:layout_weight="1" >
@@ -142,16 +154,28 @@
 
 
              <LinearLayout
+
                  android:id="@+id/main_title_rl"
                      android:layout_width="200dp"
                  android:layout_height="20dp"
-                 android:layout_alignParentTop="true"
-                 android:layout_toEndOf="@+id/camera"
                  android:layout_weight="1"
                      android:background="@color/black_overlay"
-                 android:orientation="vertical">
+                 android:orientation="vertical"
+                 android:layout_alignParentTop="true"
+                 android:layout_centerHorizontal="true">
+                 <!--android:layout_toStartOf="@+id/show_dropdown_menu"-->
 
 
+                 <TextView
+                     android:id="@+id/ConnectStatusTextViewCamera"
+                     android:layout_width="186dp"
+                     android:layout_height="wrap_content"
+                     android:layout_above="@+id/timer"
+
+                     android:text="FPVDemo"
+
+                     android:textColor="@android:color/white"
+                     android:textSize="19sp" />
              </LinearLayout>
 
          <TextView
@@ -186,7 +210,9 @@
 
                      android:layout_centerHorizontal="true"
                      android:layout_gravity="center"
-                     android:background="#FFFFFF00" />
+                     android:background="#FFFFFF00"
+                     android:layout_alignTop="@+id/timer"
+                     android:layout_above="@+id/linearLayout" />
 
 
              <LinearLayout
@@ -235,6 +261,7 @@
 
 
          </LinearLayout>
+<!--
 
              <Spinner
                  android:id="@+id/camera"
@@ -246,10 +273,11 @@
                  android:layout_toStartOf="@+id/timer"
                  android:layout_weight="0.5"
                  android:spinnerMode="dropdown" />
+-->
 
 
 
-             <Spinner
+            <!-- <Spinner
                  android:id="@+id/image_resol"
                  android:layout_width="match_parent"
                  android:layout_height="wrap_content"
@@ -258,19 +286,7 @@
                  android:layout_alignParentTop="true"
                  android:layout_alignParentEnd="true"
                  android:layout_toEndOf="@+id/main_title_rl"
-                 android:layout_above="@+id/video_previewer_surface" />
-
-
-
-             <TextView
-                 android:id="@+id/ConnectStatusTextViewCamera"
-                 android:layout_width="wrap_content"
-                 android:layout_height="wrap_content"
-                 android:layout_above="@+id/timer"
-                 android:layout_toEndOf="@+id/camera"
-                 android:text="FPVDemo"
-                 android:textColor="@android:color/white"
-                 android:textSize="19sp" />
+                 android:layout_above="@+id/video_previewer_surface" />-->
 
 
              <LinearLayout
@@ -278,13 +294,15 @@
                  android:layout_height="wrap_content"
                  android:orientation="vertical"
                  android:layout_alignBottom="@+id/video_previewer_surface"
-                 android:layout_alignParentStart="true">
+                 android:layout_alignParentStart="true"
+                 android:id="@+id/linearLayout2">
 
                  <TextView
                      android:id="@+id/speed"
                      android:layout_width="wrap_content"
                      android:layout_height="wrap_content"
-                     android:text="0"
+                     android:textColor="@android:color/white"
+                     android:text="N/A"
                      android:textSize="19sp"
 
                      />
@@ -292,7 +310,8 @@
                      android:id="@+id/speedx"
                      android:layout_width="wrap_content"
                      android:layout_height="wrap_content"
-                     android:text="0"
+                     android:textColor="@android:color/white"
+                     android:text="N/A"
                      android:textSize="19sp"
 
                      />
@@ -300,7 +319,8 @@
                      android:id="@+id/speedy"
                      android:layout_width="wrap_content"
                      android:layout_height="wrap_content"
-                     android:text="0"
+                     android:textColor="@android:color/white"
+                     android:text="N/A"
                      android:textSize="19sp"
 
                      />
@@ -310,7 +330,8 @@
                      android:id="@+id/altitude"
                      android:layout_width="wrap_content"
                      android:layout_height="wrap_content"
-                     android:text="0"
+                     android:textColor="@android:color/white"
+                     android:text="N/A"
                      android:textSize="19sp"
 
                      />
@@ -318,20 +339,32 @@
 
              </LinearLayout>
 
-           <!--  <Button
+             <Button
                  android:id="@+id/show_dropdown_menu"
                  android:layout_width="wrap_content"
                  android:layout_height="wrap_content"
                  android:background="#059636"
                  android:onClick="showDropDownMenu"
-                 android:text="Show DropDown Menu"
+                 android:text="camera settings"
                  android:textColor="#fff"
                  android:layout_alignParentTop="true"
-                 android:layout_alignParentStart="true" /-->
+                 android:layout_toEndOf="@+id/timer"
+                 android:layout_above="@+id/timer"></Button>
 
+             <TextView
+                 android:id="@+id/battery"
+                 android:layout_width="200dp"
+                 android:layout_height="wrap_content"
+
+
+                 android:textSize="19sp"
+
+                 android:layout_above="@+id/video_previewer_surface"
+                 android:layout_toStartOf="@+id/main_title_rl" />
 
          </RelativeLayout>
 
      </LinearLayout>
+
 
    </LinearLayout>
