@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+
+
+    <item
+        android:id="@+id/resolution"
+
+        android:title="resolution"
+        android:visible="true" />
+
+    <item
+        android:id="@+id/opencv"
+
+        android:title="camera"
+        android:visible="true" />
+
+
+    <item
+        android:id="@+id/movecam"
+
+        android:title="move camera"
+        android:visible="true" />
+</menu>

@@ -1,37 +1,72 @@
 package googlemap.gsdemo.dji.com.gsdemo;
 
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
+import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.util.Log;
-import android.widget.Toast;
 import android.content.Context;
+import android.view.View;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.mapsforge.core.graphics.Bitmap;
+import org.mapsforge.core.graphics.Color;
+import org.mapsforge.core.graphics.Paint;
+import org.mapsforge.core.graphics.Style;
 import org.mapsforge.core.model.LatLong;
+import org.mapsforge.core.model.Tag;
+import org.mapsforge.map.android.graphics.AndroidGraphicFactory;
+import org.mapsforge.map.layer.overlay.Polyline;
+import org.opencv.core.Mat;
 
 import java.text.DecimalFormat;
-import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 
-import googlemap.gsdemo.dji.com.gsdemo.MainActivity;
-
+import image.edit.opencv.ImageEdit;
 
 
 /**
  * Created by George on 7/5/2016.
  */
-public class Coordinates {
+public class Coordinates extends MainActivity implements AsyncResponse {
 
 
 
     protected static final String TAG = "GSDemoActivity";
-
+public static int point=0;
     double lat;
 
     LatLong l;
     double distance;
     double lon;
     float altitute;
+   static long r=0;
+ static Context c,context;
+    protected int speed,height1;
+
+    Activity a;
+
+    Coordinates(int speed,int height){
+        this.speed=speed;
+        this.height1=height;
+
+    }
+
+
+    Coordinates(Context c, Activity a){
+        this.a=a;
+
+this.context=c;
+
+
+    }
+
+
     Coordinates(double lat,double lon){
 
         this.lat=lat;
@@ -39,8 +74,9 @@ public class Coordinates {
 
 
     }
-    Coordinates(LatLong l,double distance,float h){
+    Coordinates(LatLong l,double distance,float h,Context c){
 this.l=l;
+        this.c=c;
         this.distance=distance;
         this.altitute=h;
 
@@ -48,7 +84,16 @@ this.l=l;
     }
 
     private static String url;
-    private static int height[]=new int[2];
+    private static float height[];
+
+private  Context returnContext(){
+
+    return context;
+
+}
+
+
+
 
     @Override
     public String toString() {
@@ -166,6 +211,7 @@ this.l=l;
         int i = 0, j = 0, k = 0;
         int flag[][] = new int[2][2];
         Log.e(TAG, "Path 1 " + "in " + drone_num[i][j]);
+
         drone_move[0] = drone_point[0][0];
         while (Coordinates.check_array(drone_flag)&&dm<drone_move.length) {
             //Log.e(TAG, "flag " + drone_flag[i][j] );
@@ -321,11 +367,11 @@ return emid;
             latitude2 = Math.toDegrees(latitude2);
             longitude2 = Math.toDegrees(lon2);
 
-            DecimalFormat df = new DecimalFormat("##.######");
-            latitude2 = Double.parseDouble(df.format(latitude2));
+            //DecimalFormat df = new DecimalFormat("##.######");
+          //  latitude2 = Double.parseDouble(df.format(latitude2));
 
 
-            longitude2 = Double.parseDouble(df.format(longitude2));
+          //  longitude2 = Double.parseDouble(df.format(longitude2));
 
             int k = 0;
 
@@ -360,42 +406,54 @@ return s;
 
 
 
-    public static Coordinates[] create_grid(double lat[], double lon[], int f, int al) {
+    public static Coordinates[] create_grid(double lat[], double lon[], int f, float al,boolean path_opti) {
         Coordinates c=new Coordinates(0,0);
 
-MainActivity ma=new MainActivity();
+
        // ma.setResultToToast("distance " +Coordinates. distFrom(lat[1], lon[1], lat[0], lon[0]));
-       // Log.e(TAG, "distance " +Coordinates. distFrom(lat[1], lon[1], lat[0], lon[0]));
 
 
-        long r = Math.abs(Math.round(2.0 * al * Math.tan(Math.toRadians(f / 2.0))));
+
+        r = Math.abs(Math.round(2.0 * al * Math.tan(Math.toRadians(f / 2.0))));
+        //r =100;
         Log.e(TAG, "r " + r);
         //ma.setResultToToast("r " + r);
+        mapView.getLayerManager().getLayers().remove(diagonios[1]);
 
+        int x = (int) (Math.round((1000 * Coordinates.distFrom(lat[1], lon[1], lat[1], lon[0])) / r));
+        // Log.e(TAG, "distance x " + Coordinates.distFrom(lat[1], lon[1], lat[1], lon[0]));
+        int y = (int) (Math.round((1000 * Coordinates.distFrom(lat[1], lon[1], lat[0], lon[1])) / r));
 
-       int x = (int) ((1000 * Coordinates.distFrom(lat[1], lon[1], lat[1], lon[0])) / r);
-       // Log.e(TAG, "distance x " + Coordinates.distFrom(lat[1], lon[1], lat[1], lon[0]));
-       int y = (int) ((1000 * Coordinates.distFrom(lat[1], lon[1], lat[0], lon[1])) / r);
-       // Log.e(TAG, "distance y " + Coordinates.distFrom(lat[1], lon[1], lat[0], lon[1]));
-      //  Log.e(TAG, "y " + y);
-       // Log.e(TAG,"Corner 1 " + new Coordinates(lon[1], lat[1]).toString());
-       // Log.e(TAG,"Corner 1 " + new Coordinates(lon[0], lat[1]).toString());
+         Log.e(TAG, "distance x" +Coordinates. distFrom(lat[1], lon[1], lat[1], lon[0]));
+
+        Log.e(TAG, "distance y" +Coordinates. distFrom(lat[1], lon[1], lat[0], lon[1]));
 
         Log.e(TAG, "y " + y);
 
         if (y > 1)
             y = y - 1;
 
-        if (x == 0 || y == 0) {
+        if (x == 0 && y == 0) {
 
-
+            Drawable drawable =context.getResources().getDrawable(R.drawable.red_mark);
+            Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
+            bitmap.incrementRefCount();
+            Mark mark = new Mark(new LatLong(lon[1], lat[1]), bitmap, 0, -bitmap.getHeight() / 2);
+            mark.setOnTabAction(new Run(-1, context));
+            marks.add(mark);
+            mapView.getLayerManager().getLayers().add(mark);
+            marks.add(mark);
+            Log.e(TAG, "null " );
 
             return null;
 
         }
+
         Log.e(TAG, "x " + x);
         //ma.setResultToToast("x " + x);
-        Coordinates[] points = new Coordinates[(2 * y)];
+        Coordinates[] points=null;
+        if (y>0)
+       points = new Coordinates[(2 * y)];
         Coordinates[][] midpoints = new Coordinates[2][x];
         Coordinates[] inpoints = new Coordinates[(x * y)];
         Coordinates[][] drone_point = new Coordinates[x + 2][y + 2];
@@ -416,9 +474,10 @@ MainActivity ma=new MainActivity();
         get_gps_distance(lon[0], lat[0],Coordinates. bearing(lon[0], lat[0], lon[1], lat[0]), x, r, 0, 1,t1D,midpoints,0);//create points for mid points
 
 
-        Log.e(TAG, "extend distance before  " + 1000*Coordinates.distFrom(midpoints[1][midpoints[1].length - 1].lon, midpoints[1][midpoints[0].length - 1].lat, lat[1], lon[1]));
+//        Log.e(TAG, "extend distance before  " + 1000*Coordinates.distFrom(midpoints[1][midpoints[1].length - 1].lon, midpoints[1][midpoints[0].length - 1].lat, lat[1], lon[1]));
 
-        while (1000*Coordinates.distFrom(midpoints[1][midpoints[0].length - 1].lon, midpoints[1][midpoints[0].length - 1].lat, lat[1], lon[1]) > r) {
+        if (midpoints[0].length>0)
+        while ((int)(1000*Coordinates.distFrom(midpoints[1][midpoints[0].length - 1].lon, midpoints[1][midpoints[0].length - 1].lat, lat[1], lon[1])) > r) {
             Log.e(TAG, "extend distance   " + 1000*Coordinates.distFrom(midpoints[1][midpoints[1].length - 1].lon, midpoints[1][midpoints[0].length - 1].lat, lat[1], lon[1]));
             int l = (int) ((1000 * c.distFrom(midpoints[1][midpoints[0].length - 1].lon, midpoints[1][midpoints[0].length - 1].lat, lat[1], lon[1])) / r);
             Coordinates[][] emid = new Coordinates[2][midpoints[0].length + l];
@@ -428,12 +487,17 @@ MainActivity ma=new MainActivity();
             midpoints=c.twoDimensionalArrayClone(emid);
 
         }
-        int em = midpoints[0].length;
-        Log.e(TAG, "extend after   " + 1000*Coordinates.distFrom(midpoints[1][midpoints[1].length - 1].lon, midpoints[1][midpoints[0].length - 1].lat, lat[1], lon[1]));
 
-        if (points[points.length-1].lon>lat[1]){
+//        Log.e(TAG, "extend after   " + 1000*Coordinates.distFrom(midpoints[1][midpoints[1].length - 1].lon, midpoints[1][midpoints[0].length - 1].lat, lat[1], lon[1]));
+
+        if (points!=null&&points.length>0&&points[points.length-1].lon>lat[1]){
             points=c.decrease_y(new Coordinates(lon[0], lat[1]), new Coordinates(lon[1], lat[1]),points);
             y=points.length/2;
+        }
+        else {
+
+        //    if (!path_opti)return null;
+            Log.e(TAG, "null");
         }
 
 
@@ -442,6 +506,7 @@ MainActivity ma=new MainActivity();
         drone_num = new int[x + 2][y + 2];
 
         int in=0;
+        if (midpoints!=null&&midpoints.length>0)
         for (int i = 0; i < x; i++)
             in=get_gps_distance(midpoints[0][i].lat, midpoints[0][i].lon, Coordinates.bearing(midpoints[0][i].lat, midpoints[0][i].lon, midpoints[1][i].lat, midpoints[1][i].lon), y, r, 0, 2,inpoints,t2D,in);
 
@@ -506,13 +571,134 @@ MainActivity ma=new MainActivity();
             c1++;
 
         }
+       // Log.e(TAG, "drone_move length before: " + drone_point[0].length+" "+drone_point.length);
+       // if (Double.compare(drone_point[0][0].lat,drone_point[drone_point.length - 1][drone_point[0].length - 1].lat)>0)
+           // retrieve_error_y(drone_point);
 
+        if (drone_point.length>=2&&Double.compare(drone_point[drone_point.length - 2][drone_point[0].length - 1].lat,drone_point[drone_point.length - 1][drone_point[0].length - 1].lat)>0){
+
+            Log.e(TAG, "retrive x");
+            retrieve_error_x(drone_point);
+
+        }
+
+
+        lat[1]=drone_point[drone_point.length - 1][drone_point[0].length - 1].lon;
+        lon[1]=drone_point[drone_point.length - 1][drone_point[0].length - 1].lat;
+
+
+        corner[0]=new Coordinates(lon[0],lat[0]);
+        corner[1]=new Coordinates(lon[1],lat[1]);
+
+      //  Log.e(TAG, "drone_move length: " + drone_point[0].length+" "+drone_point.length);
+       // Log.e(TAG, "lon " + lon[1]+" lat: "+lat[1]);
+        Drawable drawable =context.getResources().getDrawable(R.drawable.red_mark);
+       Bitmap  bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
+        bitmap.incrementRefCount();
+       Mark  mark = new Mark(new LatLong(lon[1], lat[1]), bitmap, 0, -bitmap.getHeight() / 2);
+        mark.setOnTabAction(new Run(-1, context));
+        marks.add(mark);
+        mapView.getLayerManager().getLayers().add(mark);
+        diagonios[1] = mark;
         Coordinates[] drone_move = new Coordinates[drone_point.length * drone_point[0].length];
          drone_move= algorithm_path( drone_point, drone_num);
 
 
 return  drone_move;
     }
+
+
+
+    private static void retrieve_error_y(Coordinates drone_points[][]){
+        Coordinates nmid=drone_points[drone_points.length - 1][drone_points[0].length - 1];
+        if (drone_points[0].length>=2&&Double.compare(  drone_points[drone_points.length - 1][drone_points[0].length - 2].lon,nmid.lon)<0){
+            Log.d(TAG,"correct");
+            Coordinates newco=extend_distance(drone_points[drone_points.length - 1][drone_points[0].length - 2],Coordinates.bearing(nmid.lat,nmid.lon,drone_points[drone_points.length - 1][drone_points[0].length - 2].lat,drone_points[drone_points.length - 1][drone_points[0].length - 2].lon),r);
+            for (int i=0;i<=drone_points.length-1;i++)
+                drone_points[i][drone_points[0].length-1].lon=newco.lon;
+
+
+        }
+
+
+    }
+
+    private static void retrieve_error_x(Coordinates drone_points[][]){
+        Coordinates nmid=drone_points[drone_points.length - 1][drone_points[0].length - 1];
+
+            Log.d(TAG,"correct");
+
+            for (int i=0;i<drone_points[0].length-1;i++) {
+
+                //newco=   drone_points[drone_points.length - 1][i];
+                drone_points[drone_points.length - 1][i].lat =drone_points[drone_points.length - 2][i].lat;
+                drone_points[drone_points.length - 2][i].lat =nmid.lat;
+                Log.d(TAG, drone_points[drone_points.length - 1][i].toString()+" error");
+                Log.d(TAG, drone_points[drone_points.length - 2][i].toString()+"error");
+
+
+            }
+
+//double d=get_gps_distance(drone_points[drone_points.length - 2][drone_points[0].length - 1].lat)
+       // Coordinates  nco=extend_distance(drone_points[drone_points.length - 2][drone_points[0].length - 1],Coordinates.bearing(nmid.lat,nmid.lon,drone_points[drone_points.length - 2][drone_points[0].length - 1].lat,drone_points[drone_points.length - 2][drone_points[0].length - 1].lon),r);
+        Log.d(TAG, drone_points[drone_points.length - 2][drone_points[0].length - 1].lat+"correct"+   drone_points[drone_points.length - 1][drone_points[0].length - 1].lat);
+        drone_points[drone_points.length - 1][drone_points[0].length - 1].lat= drone_points[drone_points.length - 2][drone_points[0].length - 1].lat;
+        //Log.d(TAG, drone_points[drone_points.length - 2][drone_points[0].length - 1].lat+"correct"+   drone_points[drone_points.length - 1][drone_points[0].length - 1].lat);
+        Log.d(TAG, "nmid: "+   nmid.lat);
+        drone_points[drone_points.length - 2][drone_points[0].length - 1].lat=  drone_points[drone_points.length - 2][0].lat ;
+        Log.d(TAG, drone_points[drone_points.length - 2][drone_points[0].length - 1].lat+"correct"+   drone_points[drone_points.length - 1][drone_points[0].length - 1].lat);
+
+    }
+
+
+    private static Coordinates extend_distance(Coordinates co,double angle,double d){
+
+        double R = 6371;
+
+
+        // 6 decimal for Leaflet and other system compatibility
+        //  double lat2 = Math.round (latitude2,6);
+        //double long2 = Math.round (longitude2,6);
+
+
+        double brng = Math.toRadians(angle);
+
+
+        Coordinates c;
+        double r = d / 1000.0;
+        double sum = r;
+
+        //sum = sum+r;
+
+        // Degree to Radian
+        double latitude1 = Math.toRadians(co.lat);
+        double longitude1 = Math.toRadians(co.lon);
+        // double brng = Math.toRadians(angle);;
+
+        double latitude2 = Math.asin(Math.sin(latitude1) * Math.cos(sum / R * 1.0) + Math.cos(latitude1) * Math.sin(sum / R * 1.0) * Math.cos(brng));
+        double longitude2 = longitude1 + Math.atan2(Math.sin(brng) * Math.sin(sum / R * 1.0) * Math.cos(latitude1), Math.cos(sum / R * 1.0) - Math.sin(latitude1) * Math.sin(latitude2));
+
+        double lon2 = ((longitude2 + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+        // double lon2=(( longitude1- longitude2  +Math.PI)%(2*Math.PI ))-Math.PI;
+
+        // back to degrees
+        latitude2 = Math.toDegrees(latitude2);
+        longitude2 = Math.toDegrees(lon2);
+
+        // DecimalFormat df = new DecimalFormat("##.######");
+        // latitude2 = Double.parseDouble(df.format(latitude2));
+
+
+        // longitude2 = Double.parseDouble(df.format(longitude2));
+
+        int k = 0;
+
+
+        c = new Coordinates(latitude2, longitude2);
+        return c;
+
+    }
+
 
     public static Coordinates midpoint(Coordinates a, Coordinates b) {
 
@@ -646,7 +832,7 @@ return  drone_move;
 
     }
 */
-   public static Coordinates[] create_square(double lat[], double lon[], int al, int f) {
+   public static Coordinates[] create_square(double lat[], double lon[], int al, float f) {
        Coordinates c=new Coordinates(0,0);
 
        MainActivity ma=new MainActivity();
@@ -679,6 +865,8 @@ return  drone_move;
            return null;
 
        }
+
+
        Log.e(TAG, "x " + x);
        //ma.setResultToToast("x " + x);
        Coordinates[] points = new Coordinates[(2 * y)];
@@ -733,6 +921,7 @@ return  drone_move;
 
        drone_pointS[0]=new Coordinates(lon[0], lat[0]);
 
+
        for (int i = 0; i < midpoints[0].length; i++) {
 
 
@@ -772,23 +961,56 @@ return  drone_move;
        return  drone_pointS;
    }
 
+    static boolean  flag=false;
+public void sealevel_altitute(Coordinates[] drone_move){
 
-public  void sealevel_altitute(Coordinates[] drone_move){
+    height=new float[2];
 
-    for (int i=0;i<drone_move.length-1;i++) {
-        Log.e(TAG, "Coordinates: "+drone_move[i].toString());
+
+
+
+
+//if (flag)
+for (int i=0;i<drone_move.length-1;i++) {
+
+    url = "https://open.mapquestapi.com/elevation/v1/profile?key=zVE5HdW0VoT2wJqUY4TbCzxnQzz1XD1T&callback=handleHelloWorldResponse&shapeFormat=raw&latLngCollection=";
+    //Log.e(TAG, "Coordinates: "+drone_move[i].toString());
+    url=url.concat(drone_move[i].lat+","+drone_move[i].lon+","+drone_move[i+1].lat+","+drone_move[i+1].lon);
+
+    Sealevel asyncTask =new Sealevel();
+
+    asyncTask.delegate = this;
+    try {
+        height=new Sealevel().execute(url).get();
+
+
+
+        }
+
+
+    catch (final InterruptedException e) {
+        Log.e(TAG, "Json parsing error: " + e.getMessage());
+
+    }
+    catch (final ExecutionException e) {
+        Log.e(TAG, "Json parsing error: " + e.getMessage());
 
     }
 
-for (int i=0;i<drone_move.length-1;i++) {
-    url = "https://open.mapquestapi.com/elevation/v1/profile?key=zVE5HdW0VoT2wJqUY4TbCzxnQzz1XD1T&callback=handleHelloWorldResponse&shapeFormat=raw&latLngCollection=";
 
-    url=url.concat(drone_move[i].lat+","+drone_move[i].lon+drone_move[i+1].lat+","+drone_move[i+1].lon);
-   // Log.e(TAG, "url: "+url);
-    new Sealevel().execute();
+    Log.e(TAG, "Height "+i + ": "+(height[0]));
+    Log.e(TAG, "Height "+i + ": "+(height[1]));
 
-   Log.e(TAG, "Height: "+i + (height[0]));
-    Log.e(TAG, "Height: "+i + (height[1]));
+
+    Log.e(TAG, "url: "+url);
+
+
+  // Log.e(TAG, "Coordinates "+i + " :"+(drone_move[i].lat+","+drone_move[i].lon));
+
+
+
+   //Log.e(TAG, "Coordinates "+(i+1 ) +": "+ (drone_move[i+1].lat+","+drone_move[i+1].lon));
+   // Log.e(TAG, "Height "+(i+1 ) +" :"+ (height[1]));
 
 }
 
@@ -797,39 +1019,226 @@ for (int i=0;i<drone_move.length-1;i++) {
 }
 
 
-    private class Sealevel extends AsyncTask<Void, Void, Void> {
 
+    public void addphotos(Coordinates[] drone_move,String path) {
+
+showimage=true;
+       LatLong LatLong = new LatLong(drone_move[0].lat, drone_move[0].lon);
+
+
+
+
+
+
+
+
+        Mark k;
+
+        LatLong LatLong2 = new LatLong(drone_move[0].lat, drone_move[0].lon);
+        k = new Mark(LatLong2, null, 0, 0);
+        marks.add(k);
+        //Add Waypoints to Waypoint arraylist;
+ImageEdit im=new ImageEdit();
+     //   Drawable drawable = c1.getResources().getDrawable(R.drawable.red_mark);
+
+        Drawable b;
+
+
+Log.d(TAG,"directory: "+STITCHING_SOURCE_IMAGES_DIRECTORY);
+
+        String Filelist[]=im.getDirectoryFilelist(path);
+
+        int n=(int)((r/2.0));
+
+        for (int i = 0; i < drone_move.length&&i<Filelist.length&&(Filelist[i]!=null); i++) {
+
+
+            b=im.loadImageFromStorage(Filelist[i]);
+
+            org.mapsforge.core.graphics.Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(b);
+            bitmap.incrementRefCount();
+
+
+
+            bitmap.scaleTo(n+100,n+100);
+            //  Log.d("diagonios",i+" "+drone_move[i].toString());
+
+
+            Paint paint = AndroidGraphicFactory.INSTANCE.createPaint();
+            paint.setColor(Color.BLUE);
+            paint.setStyle(Style.STROKE);
+            paint.setStrokeWidth(8);
+
+            if (i + 1 < drone_move.length) {
+                Polyline polyline = new Polyline(paint, AndroidGraphicFactory.INSTANCE);
+
+                if (i == 1) {
+                    List<LatLong> latLongs = polyline.getLatLongs();
+                    latLongs.add(new LatLong(drone_move[0].lat, drone_move[0].lon));
+
+                    latLongs.add(new LatLong(drone_move[1].lat, drone_move[1].lon));
+                    latLongs.add(new LatLong(drone_move[2].lat, drone_move[2].lon));
+                    marks.add(polyline);
+
+                } else {
+                    List<LatLong> latLongs = polyline.getLatLongs();
+                    latLongs.add(new LatLong(drone_move[i].lat, drone_move[i].lon));
+                    latLongs.add(new LatLong(drone_move[i + 1].lat, drone_move[i + 1].lon));
+                }
+                mapView.getLayerManager().getLayers().add(polyline);
+                marks.add(polyline);
+
+            }
+
+
+            LatLong2 = new LatLong(drone_move[i].lat, drone_move[i].lon);
+
+            k = new Mark(LatLong2, bitmap, 0, -bitmap.getHeight() /3);
+
+            //Log.d("diagonios",drone_move[i].toString());
+
+
+//k.requestRedraw();
+            k.setOnTabAction( new Run(i, c));
+            // k.setOnTabAction(r = new Run(0, c1));
+
+
+
+            mapView.getLayerManager().getLayers().add(k);
+            calt.add(k);
+
+
+
+        }
+
+
+
+//        mapView.getLayerManager().getLayers().add(k);
+
+
+    }
+    static ProgressDialog mWaitDialog;
+
+
+    protected void hideDownloadProgressDialog() {
+        if (null != mWaitDialog && mWaitDialog.isShowing())
+        {
+            mWaitDialog.dismiss();
+        }
+    }
+
+
+    public  float sealevel_check(List<Coordinates> passaloi,double droneLocationLat,double droneLocationLng,float altitute_w[]){
+        String url;
+        float[]  height=new float[2];
+        float diafora,max=0;
+
+  mWaitDialog = new ProgressDialog(c);
+            mWaitDialog.setTitle("Wait...");
+            mWaitDialog.setIcon(android.R.drawable.ic_dialog_info);
+            mWaitDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            mWaitDialog.setCanceledOnTouchOutside(false);
+            mWaitDialog.setCancelable(false);
+            mWaitDialog.show();
+          //  mWaitDialog.setProgress(0);
+        for (int i=0;i<passaloi.size();i++) {
+
+            url = "https://open.mapquestapi.com/elevation/v1/profile?key=zVE5HdW0VoT2wJqUY4TbCzxnQzz1XD1T&callback=handleHelloWorldResponse&shapeFormat=raw&latLngCollection=";
+            //Log.e(TAG, "Coordinates: "+drone_move[i].toString());
+            url=url.concat(droneLocationLat+","+droneLocationLng+","+passaloi.get(i).l.getLatitude()+","+passaloi.get(i).l.getLongitude());
+
+            //Sealevel asyncTask = new Sealevel();
+
+
+            try {
+
+                Sealevel asyncTask =new Sealevel();
+
+                asyncTask.delegate = this;
+
+
+                height=new Sealevel().execute(url).get();
+
+
+                diafora=height[1]-height[0];
+
+                if (diafora>0){
+
+
+                    altitute_w[i]=diafora+passaloi.get(i).altitute+5;
+                    if (max<diafora||i==0){
+                        max=diafora;
+                    }
+
+                }
+                else
+
+                    altitute_w[i]=passaloi.get(i).altitute+5;
+
+
+                Log.e(TAG, "Height "+i + ": "+(height[0]));
+                 Log.e(TAG, "Height "+i + ": "+(height[1]));
+                Log.e(TAG, "url: "+url);
+
+
+            } catch (final InterruptedException e) {
+                Log.e(TAG, "Json parsing error: " + e.getMessage());
+
+            } catch (final ExecutionException e) {
+                Log.e(TAG, "Json parsing error: " + e.getMessage());
+
+            }
+
+
+        }
+
+        Log.e(TAG, "max: "+max);
+        return max;
+    }
+
+
+
+    private class Sealevel extends AsyncTask<String, Void, float[]> {
+        public AsyncResponse delegate = null;
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+        }
 
         @Override
-        protected Void doInBackground(Void... arg0) {
+        protected float[] doInBackground(String... arg0) {
             HttpHandler sh = new HttpHandler();
 
             // Making a request to url and getting response
-            String jsonStr = sh.makeServiceCall(url);
+            String jsonStr = sh.makeServiceCall(arg0[0]);
 
            // Log.e(TAG, "Response from url: " + jsonStr);
-
+            float[] Height=null;
             if (jsonStr != null) {
                 try {
                     JSONObject jsonObj = new JSONObject(jsonStr.substring(25,jsonStr.length()-1));
 
                     // Getting JSON Array node
                     JSONArray elevation = jsonObj.getJSONArray("elevationProfile");
-
+                    Height=new float[2];
                     // looping through All Contacts
                     for (int i = 0; i < elevation.length(); i++) {
                         JSONObject c = elevation.getJSONObject(i);
 
-                     height[i]= c.getInt("height");
+                        Height[i]= c.getInt("height");
                        // String name = c.getString("distance");
 
-                        //Log.e(TAG, "Height: "+i + (height[i]));
+
+                       //Log.e(TAG, "Height Background: "+i+":"+ (height[i]));
 
 
 
 
 
                     }
+
+
                 } catch (final JSONException e) {
                     Log.e(TAG, "Json parsing error: " + e.getMessage());
                    /* runOnUiThread(new Runnable() {
@@ -857,12 +1266,40 @@ for (int i=0;i<drone_move.length-1;i++) {
 
             }
 
-            return null;
+            return Height;
+        }
+
+        protected void onProgressUpdate(Integer... progress) {
+            //setProgressPercent(progress[0]);
+        }
+        @Override
+        protected void onPostExecute(float[] result) {
+            super.onPostExecute(result);
+            hideDownloadProgressDialog();
+            //if (null != mWaitDialog)
+           // {
+            Toast.makeText(c,"Finish",Toast.LENGTH_LONG);
+
+           // }
+
+
+
+
         }
 
 
     }
 
+    @Override
+    public void processFinish(float[] result) {
 
 
+        hideDownloadProgressDialog();
+        for (int i = 0; i < result.length; i++) {
+            height[i] = result[i];
+
+        }
+       // Log.e(TAG, "Height finish"+ (height[0]));
+        flag=true;
+    }
 }

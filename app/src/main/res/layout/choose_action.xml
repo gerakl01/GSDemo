@@ -5,7 +5,7 @@
     <RadioGroup
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:id="@+id/choose"
         android:layout_gravity="center_horizontal">
         <RadioButton
@@ -32,6 +32,7 @@
 
 
         <RadioButton
+            android:visibility="gone"
             android:id="@+id/fromefile"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -43,10 +44,11 @@
 
 
     <CheckBox
-        android:id="@+id/photo1"
+        android:id="@+id/optim_path"
+        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Take photo at each waypoint"
+        android:text="Optimize path"
         android:onClick="onCheckboxClicked" />
 
 

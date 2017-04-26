@@ -30,11 +30,13 @@
     android:layout_height="wrap_content"
     android:text="Altitude:">
 </TextView>
-    <EditText
+    <TextView
+
+        android:digits="0123456789."
     android:id="@+id/altitude"
-    android:layout_width="40dp"
+    android:layout_width="75dp"
     android:layout_height="wrap_content">
-</EditText>
+</TextView>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -173,6 +175,80 @@
                 android:textSize="5pt"
                 android:text="Use Waypoint"/>
         </RadioGroup>
+
+
+
+
     </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="10dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Take photo:"/>
+    </LinearLayout>
+    <CheckBox
+        android:visibility="visible"
+        android:saveEnabled="true"
+        android:id="@+id/photo1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Take photo at each waypoint"
+        android:onClick="onCheckboxClicked" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="visible">
+        <RadioGroup
+
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:id="@+id/hi"
+            android:layout_gravity="center_horizontal">
+            <RadioButton
+
+                android:id="@+id/photo_continue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="5pt"
+                android:text="Continue photo SAVE LOCALLY"/>
+            <RadioButton
+
+                android:id="@+id/continue_remote"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="5pt"
+                android:text="Continue photo SAVE REMOTELY"/>
+            <RadioButton
+                android:id="@+id/photo_stop"
+                android:visibility="gone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="5pt"
+                android:text="photo stop"/>
+            <RadioButton
+                android:id="@+id/shoot_photo_distance_ihnterval"
+                android:visibility="gone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="5pt"
+                android:text="shoot phot interval"/>
+
+        </RadioGroup>
+
+
+
+
+    </LinearLayout>
+
+
 
 </LinearLayout>
