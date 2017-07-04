@@ -57,30 +57,27 @@ public final class R {
         public static final int btn_lock_selector=0x7f020000;
         public static final int btn_radio_selector=0x7f020001;
         public static final int btn_zoom_selector=0x7f020002;
-        public static final int ic_launcher=0x7f020003;
-        public static final int radio_checked=0x7f020004;
-        public static final int radio_unchecked=0x7f020005;
+        public static final int radio_checked=0x7f020003;
+        public static final int radio_unchecked=0x7f020004;
     }
     public static final class id {
         public static final int bold=0x7f0a0002;
-        public static final int dbg_region=0x7f0a0009;
+        public static final int dbg_region=0x7f0a0008;
         public static final int demi=0x7f0a0003;
-        public static final int log_dlg_content=0x7f0a000d;
-        public static final int log_dlg_control=0x7f0a0007;
-        public static final int log_dlg_lock=0x7f0a0008;
-        public static final int log_dlg_rg=0x7f0a000e;
-        public static final int log_dlg_scroll=0x7f0a000c;
+        public static final int log_dlg_content=0x7f0a000c;
+        public static final int log_dlg_control=0x7f0a0006;
+        public static final int log_dlg_lock=0x7f0a0007;
+        public static final int log_dlg_rg=0x7f0a000d;
+        public static final int log_dlg_scroll=0x7f0a000b;
         public static final int nbold=0x7f0a0004;
         public static final int nlight=0x7f0a0005;
-        public static final int numberPicker1=0x7f0a000a;
+        public static final int numberPicker1=0x7f0a0009;
         public static final int pad=0x7f0a0000;
         public static final int phone=0x7f0a0001;
-        public static final int set_sre_button=0x7f0a000b;
-        public static final int webview=0x7f0a0006;
+        public static final int set_sre_button=0x7f0a000a;
     }
     public static final class layout {
-        public static final int dialog_login=0x7f030000;
-        public static final int log_dialog_view=0x7f030001;
+        public static final int log_dialog_view=0x7f030000;
     }
     public static final class raw {
         public static final int dock=0x7f060000;
@@ -88,35 +85,14 @@ public final class R {
         public static final int flyc_param_infos=0x7f060002;
         public static final int flyforbid=0x7f060003;
         public static final int gimbal_param_infos=0x7f060004;
-        public static final int iframe_1080x720_gd600=0x7f060005;
-        public static final int iframe_1080x720_wm620=0x7f060006;
-        public static final int iframe_1088x720_wm620=0x7f060007;
-        public static final int iframe_1280x720_3s=0x7f060008;
-        public static final int iframe_1280x720_ins=0x7f060009;
-        public static final int iframe_1280x720_p4=0x7f06000a;
-        public static final int iframe_1280x720_wm220=0x7f06000b;
-        public static final int iframe_1280x720_wm620=0x7f06000c;
-        public static final int iframe_1344x720_wm620=0x7f06000d;
-        public static final int iframe_1360x720_wm620=0x7f06000e;
-        public static final int iframe_1632x1080_wm620=0x7f06000f;
-        public static final int iframe_1760x720_wm620=0x7f060010;
-        public static final int iframe_1920x1024_wm620=0x7f060011;
-        public static final int iframe_1920x1088_wm620=0x7f060012;
-        public static final int iframe_1920x1440_wm620=0x7f060013;
-        public static final int iframe_1920x800_wm620=0x7f060014;
-        public static final int iframe_608x448_wm620=0x7f060015;
-        public static final int iframe_640x368_wm620=0x7f060016;
-        public static final int iframe_640x480=0x7f060017;
-        public static final int iframe_720x480_wm620=0x7f060018;
-        public static final int iframe_848x480=0x7f060019;
-        public static final int iframe_960x720_3s=0x7f06001a;
-        public static final int iframe_960x720_wm620=0x7f06001b;
-        public static final int iframe_cam_cap_4p=0x7f06001c;
-        public static final int iframe_p4p_1344x720=0x7f06001d;
-        public static final int iframe_p4p_720_16x9=0x7f06001e;
-        public static final int iframe_p4p_720_3x2=0x7f06001f;
-        public static final int iframe_p4p_720_4x3=0x7f060020;
-        public static final int iframe_wm220_1280x720=0x7f060021;
+        public static final int iframe_1280x720_3s=0x7f060005;
+        public static final int iframe_1280x720_ins=0x7f060006;
+        public static final int iframe_1280x720_p4=0x7f060007;
+        public static final int iframe_1280x720_wm220=0x7f060008;
+        public static final int iframe_640x480=0x7f060009;
+        public static final int iframe_720x480_wm620=0x7f06000a;
+        public static final int iframe_848x480=0x7f06000b;
+        public static final int iframe_960x720_3s=0x7f06000c;
     }
     public static final class string {
         public static final int app_name=0x7f0700c2;
